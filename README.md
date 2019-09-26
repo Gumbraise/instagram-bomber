@@ -8,6 +8,9 @@ Into the Command Prompt execute command ```python pip install InstagramAPI``` ``
 
 ## Use
 
+[![INSTAGRAM BOMBER TRAILER](https://img.youtube.com/vi/B4RnwACYjoI/0.jpg)](https://www.youtube.com/watch?v=B4RnwACYjoI)
+
+
 Follow these steps:
 
 1. Put the InstagramAPI.py file into ``Program Files\Python\Python36-32\Lib\site-packages\InstagramAPI``
