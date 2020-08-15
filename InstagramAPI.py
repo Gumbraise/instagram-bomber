@@ -21,19 +21,11 @@ from requests_toolbelt import MultipartEncoder
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-try:
-    from moviepy.editor import VideoFileClip
-except:
-    print("Fail to import moviepy. Need only for Video upload.")
 
 # The urllib library was split into other modules from Python 2 to Python 3
 if sys.version_info.major == 3:
     import urllib.parse
-try:
-    from ImageUtils import getImageSize
-except:
-    # Issue 159, python3 import fix
-    from .ImageUtils import getImageSize
+
 
 
 class InstagramAPI:

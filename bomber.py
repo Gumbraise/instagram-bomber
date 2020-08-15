@@ -36,8 +36,10 @@ else:
     api = InstagramAPI(username, password)
     api.login()
 
-user_id = input("Enter the victim's IG User ID: ")
-
+user = input("Enter the victim's IG User ID: ")
+response = requests.get("https://www.instagram.com/"+user+"/?__a=1")
+respJSON = response.json()
+user_id = str( respJSON['graphql'].get("user").get("id") )
 
 message = input("Put the message you want the software send and press ENTER: ")
 times = int(input("How many messages do you want to send? "))
@@ -46,4 +48,4 @@ times = int(input("How many messages do you want to send? "))
 while times > nostop:
     nostop = nostop + 1
     api.sendMessage(user_id,message)
-    print(nostop, ">> Sent to", user_id, ": ", message)
+    print(nostop, ">> Sent to", user, ": ", message)
