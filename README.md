@@ -4,7 +4,7 @@ An open-source project. Instagram Messages Spammer/Bomber
 
 ## Requirements
 
-Into the Command Prompt execute command ```python pip install InstagramAPI``` ```python pip install time``` ```python pip install requests``` ```python pip install json``` 
+Into the Command Prompt execute command ```python pip install InstagramAPI``` ```python pip install time``` ```python pip install requests``` ```python pip install json``` ```pip install requests_toolbelt```
 
 ## Use
 
