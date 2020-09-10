@@ -93,7 +93,6 @@ class InstagramAPI:
                     self.username_id = self.LastJson["logged_in_user"]["pk"]
                     self.rank_token = "%s_%s" % (self.username_id, self.uuid)
                     self.token = self.LastResponse.cookies["csrftoken"]
-
                     self.syncFeatures()
                     self.autoCompleteUserList()
                     self.timelineFeed()
@@ -101,6 +100,9 @@ class InstagramAPI:
                     self.getRecentActivity()
                     print("Login success!\n")
                     return True
+                else:
+                    print("\nWhoops. Couldn't login. Check the above flags to know more.")
+                    exit(1)
 
     def syncFeatures(self):
         data = json.dumps({'_uuid': self.uuid,
