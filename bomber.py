@@ -60,6 +60,8 @@ try:
                         user_id = str( respJSON['graphql'].get("user").get("id") )
                     except:
                         print ("Unknown victim's username")
+                        print ("Program will now terminate. Kindly identify victim account.")
+                        exit(0)
 
                     while True:
                         try:
