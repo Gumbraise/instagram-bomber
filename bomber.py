@@ -33,7 +33,6 @@ else:
     api = InstagramAPI(username, password)
     api.login()
 
-#GetUserID
 user = input("Enter the victim's IG Username: ")
 response = requests.get("https://www.instagram.com/"+user+"/?__a=1")
 respJSON = response.json()
