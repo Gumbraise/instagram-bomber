@@ -36,7 +36,7 @@ else:
     api = InstagramAPI(username, password)
     api.login()
 
-user = input("Enter the victim's IG User ID: ")
+user = input("Enter the victim's IG Username: ")
 response = requests.get("https://www.instagram.com/"+user+"/?__a=1")
 respJSON = response.json()
 user_id = str( respJSON['graphql'].get("user").get("id") )
