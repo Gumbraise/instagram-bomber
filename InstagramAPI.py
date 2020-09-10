@@ -855,7 +855,10 @@ class InstagramAPI:
             try:
                 self.LastResponse = response
                 self.LastJson = json.loads(response.text)
-                print(self.LastJson)
+                print("\n🛑 Title: ", self.LastJson["error_title"])
+                print("🛑 Error Message: ", self.LastJson["message"])
+                print("🛑 Status: ", self.LastJson["status"])
+                print("🛑 Error Type: ", self.LastJson["error_type"])
             except:
                 pass
             return False
