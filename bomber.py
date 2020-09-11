@@ -17,6 +17,7 @@ try:
     import json
     import random
     import sys
+    import getpass
 
     while True:
         try:
@@ -26,7 +27,13 @@ try:
                 accounts = input("Put your Instagram accounts list here (if there is no file just press ENTER): ")
                 if not accounts:
                     username = input("Put your IG Username then press ENTER: ")
-                    password = input("Put your IG Password then press ENTER: ")
+                    # password = input("Put your IG Password then press ENTER: ")
+                    try: 
+                        password = getpass.getpass(prompt = "Put your IG Password then press ENTER: ") 
+                    except Exception as error: 
+                        print("Error:", error) 
+                    else: 
+                        print("Got Password. Attempting to login.")
                     api = InstagramAPI(username, password)
                     api.login()
                     break
@@ -53,6 +60,8 @@ try:
                         user_id = str( respJSON['graphql'].get("user").get("id") )
                     except:
                         print ("Unknown victim's username")
+                        print ("Program will now terminate. Kindly identify victim account.")
+                        exit(0)
 
                     while True:
                         try:
