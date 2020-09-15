@@ -1,5 +1,4 @@
 requests
-json
 hashlib
 hmac
 urllib
