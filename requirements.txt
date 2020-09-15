@@ -1,4 +1,6 @@
 requests
+random
+json
 hashlib
 hmac
 urllib
