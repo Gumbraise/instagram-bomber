@@ -65,11 +65,9 @@ class InstagramAPI:
         self.uuid = self.generateUUID(True)
 
     def setProxy(self, proxy=None):
-        """
-        Set proxy for all requests::
+        """Set proxy for all requests::
 
-        Proxy format - user:password@ip:port
-        """
+        Proxy format - user:password@ip:port"""
 
         if proxy is not None:
             print('Set proxy!')
@@ -128,9 +126,6 @@ class InstagramAPI:
                            '_csrftoken': self.token,
                            'experiment': 'ig_android_profile_contextual_feed'})
         return self.SendRequest('qe/expose/', self.generateSignature(data))
-
-    def logout(self):
-        logout = self.SendRequest('accounts/logout/')
 
     def uploadPhoto(self, photo, caption=None, upload_id=None, is_sidecar=None):
         if upload_id is None:
@@ -375,9 +370,8 @@ class InstagramAPI:
             try:
                 self.LastResponse = response
                 self.LastJson = json.loads(response.text)
-            except:
-                pass
-            return False
+            except ValueError:
+                return False
 
     def sendMessage(self, target_user, msgText):
         target_user = '[[{}]]'.format(','.join([target_user]))
@@ -391,7 +385,7 @@ class InstagramAPI:
         'action': 'send_item',
         'client_context': self.generateUUID(True)}
         return self.SendRequest(url, data)
-        
+
     def direct_share(self, media_id, recipients, text=None):
         if not isinstance(position, list):
             recipients = [str(recipients)]
@@ -924,6 +918,6 @@ class InstagramAPI:
                 next_id = temp["next_max_id"]
                 for item in temp["items"]:
                     liked_items.append(item)
-            except KeyError as e:
+            except KeyError:
                 break
         return liked_items

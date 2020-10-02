@@ -10,7 +10,7 @@ An open-source project. Instagram Messages Spammer/Bomber
 
 [![INSTAGRAM BOMBER TRAILER](https://img.youtube.com/vi/B4RnwACYjoI/0.jpg)](https://www.youtube.com/watch?v=B4RnwACYjoI)
 
-### A DEMO VIDEO WILL BE RELEASED IN A WHILE.
+### A DEMO VIDEO WILL BE RELEASED IN A WHILE
 The program will stop when the number you have enter previously will have been exceeded.<br>
 Else, you can stop the program by pressing ``CTRL + C``
 
