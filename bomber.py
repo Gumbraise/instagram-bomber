@@ -12,7 +12,6 @@
 """
 try:
     from InstagramAPI import InstagramAPI
-    import time
     import requests
     import json
     import random
