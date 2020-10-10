@@ -70,6 +70,7 @@ try:
                             while True:
                                 try:
                                     times = int(input("How many messages do you want to send? "))
+                                    delay = int(input("Enter Delay Time (in Seconds) [ Minimum 1 sec ] : "))
                                     break
                                 except:
                                     print ("Wrong number")
@@ -82,6 +83,7 @@ try:
                                 nostop = nostop + 1
                                 api.sendMessage(user_id,message)
                                 print(nostop, ">> Sent to", user, ": ", message)
+                                time.sleep(delay)
                         except KeyboardInterrupt:
                             print ('\n')
                             break
