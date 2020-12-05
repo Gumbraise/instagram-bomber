@@ -8,10 +8,8 @@ An open-source project. Instagram Messages Spammer/Bomber
 
 ## Use
 
-[![INSTAGRAM BOMBER TRAILER](https://img.youtube.com/vi/B4RnwACYjoI/0.jpg)](https://www.youtube.com/watch?v=B4RnwACYjoI)
+[![INSTAGRAM BOMBER TRAILER](https://img.youtube.com/vi/PJ0wkxsS-uM/0.jpg)](https://youtu.be/PJ0wkxsS-uM)
 
-
-### A DEMO VIDEO WILL BE RELEASED IN A WHILE.
 The program will stop when the number you have entered previously will be exceeded.<br>
 
 Else, you can stop the program by pressing ``CTRL + C``
