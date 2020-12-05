@@ -1,9 +1,6 @@
+InstagramAPI
 requests
-hashlib
-hmac
-urllib
-uuid
 requests_toolbelt
-InsecureRequestWarning
+urllib3
 moviepy
 ImageUtils
