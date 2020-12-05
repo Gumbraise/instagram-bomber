@@ -65,6 +65,13 @@ try:
                         try:
                             nostop = 0
                             message = input("Put the message you want the software send and press ENTER: ")
+                            while True:
+                                try:
+                                    times = int(input("How many messages do you want to send? "))
+                                    break
+                                except:
+                                    print ("Wrong number")
+
                             proxylist = input("Proxy list (TXT): (If you don't have proxy list press ENTER): ")
                             if accounts:
                                 proxy = random.choice(open(proxylist).readlines())
