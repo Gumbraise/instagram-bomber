@@ -65,24 +65,14 @@ try:
                         try:
                             nostop = 0
                             message = input("Put the message you want the software send and press ENTER: ")
-
-                            while True:
-                                try:
-                                    times = int(input("How many messages do you want to send? "))
-                                    delay = int(input("Enter Delay Time (in Seconds) [ Minimum 1 sec ] : "))
-                                    break
-                                except:
-                                    print ("Wrong number")
-                            
                             proxylist = input("Proxy list (TXT): (If you don't have proxy list press ENTER): ")
-                            if 'txt' in proxylist:
+                            if accounts:
                                 proxy = random.choice(open(proxylist).readlines())
                                 api.setProxy(proxy)
                             while times > nostop:
                                 nostop = nostop + 1
                                 api.sendMessage(user_id,message)
                                 print(nostop, ">> Sent to", user, ": ", message)
-                                time.sleep(delay)
                         except KeyboardInterrupt:
                             print ('\n')
                             break
