@@ -1,5 +1,2 @@
 InstagramAPI
-requests
-requests_toolbelt
 urllib3
-moviepy
