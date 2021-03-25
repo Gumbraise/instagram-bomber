@@ -90,7 +90,7 @@ The correct id is named id, not fbid.""")
                 while times > nostop:
                     nostop = nostop + 1
                     api.sendMessage(user_id, message)
-                    print(nostop, ">> Sent to", user, ": ", message)
+                    print(nostop, ">> Sent to", user_id, ": ", message)
 
 except:
     sys.exit(
