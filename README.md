@@ -1,6 +1,9 @@
 # Instagram Bomber
 
 An open-source project. Instagram Messages Spammer/Bomber 
+## Easy install For Termux
+
+``wget https://raw.githubusercontent.com/he4lan/Instagram-bomber-ei/main/install.sh``
 
 ## Requirements
 
