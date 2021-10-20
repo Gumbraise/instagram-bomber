@@ -10,12 +10,13 @@
       ░    ░            ░    ░         ░           ░  ░ ░        ░     ░  ░
                                   ░                                        
 """
+import sys
+
 try:
     from InstagramAPI import InstagramAPI
     import requests
     import json
     import random
-    import sys
     import getpass
 
     while True:
