@@ -17,5 +17,5 @@ requests==2.25.1
 setuptools==53.0.0
 tqdm==4.60.0
 typing-extensions==3.7.4.3
-urllib3==1.26.4
+urllib3==1.26.5
 wheel==0.36.2
