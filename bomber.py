@@ -1,98 +1,246 @@
-"""
-  ▄████  █    ██  ███▄ ▄███▓ ▄▄▄▄    ██▀███   ▄▄▄       ██▓  ██████ ▓█████ 
- ██▒ ▀█▒ ██  ▓██▒▓██▒▀█▀ ██▒▓█████▄ ▓██ ▒ ██▒▒████▄    ▓██▒▒██    ▒ ▓█   ▀ 
-▒██░▄▄▄░▓██  ▒██░▓██    ▓██░▒██▒ ▄██▓██ ░▄█ ▒▒██  ▀█▄  ▒██▒░ ▓██▄   ▒███   
-░▓█  ██▓▓▓█  ░██░▒██    ▒██ ▒██░█▀  ▒██▀▀█▄  ░██▄▄▄▄██ ░██░  ▒   ██▒▒▓█  ▄ 
-░▒▓███▀▒▒▒█████▓ ▒██▒   ░██▒░▓█  ▀█▓░██▓ ▒██▒ ▓█   ▓██▒░██░▒██████▒▒░▒████▒
- ░▒   ▒ ░▒▓▒ ▒ ▒ ░ ▒░   ░  ░░▒▓███▀▒░ ▒▓ ░▒▓░ ▒▒   ▓▒█░░▓  ▒ ▒▓▒ ▒ ░░░ ▒░ ░
-  ░   ░ ░░▒░ ░ ░ ░  ░      ░▒░▒   ░   ░▒ ░ ▒░  ▒   ▒▒ ░ ▒ ░░ ░▒  ░ ░ ░ ░  ░
-░ ░   ░  ░░░ ░ ░ ░      ░    ░    ░   ░░   ░   ░   ▒    ▒ ░░  ░  ░     ░   
-      ░    ░            ░    ░         ░           ░  ░ ░        ░     ░  ░
-                                  ░                                        
-"""
 import sys
+import instagrapi
+import json
+import random
+import os
+import signal
+from getpass import getpass
 
-try:
-    from InstagramAPI import InstagramAPI
-    import requests
-    import json
-    import random
-    import getpass
+config = []
+cl = instagrapi.Client()
 
+
+def login():
     while True:
-        nostop = 0
-
-        while True:
-            accounts = input("Put your Instagram accounts list here (if there is no file just press ENTER): ")
-            if not accounts:
-                username = input("Put your IG Username then press ENTER: ")
-                try:
-                    password = getpass.getpass(prompt="Put your IG Password then press ENTER: ")
-                except Exception as error:
-                    print("Error:", error)
+        isAccount = input("Login | Do you have an account list ? (y/N): ")
+        if not isAccount or isAccount != "y":
+            while True:
+                if openJson()['sessionId'] == "":
+                    while True:
+                        username = input("Login | Username: ")
+                        try:
+                            password = getpass(prompt="Login | Password: ")
+                        except Exception as error:
+                            print("Login | Error:", error)
+                        try:
+                            cl.login(username, password)
+                            print('Login | Logged in as {}'.format(cl.username))
+                            break
+                        except:
+                            print('Login | Bad password')
+                    writeJson('sessionId', cl.sessionid)
+                    print('Login | sessionId saved')
+                    break
                 else:
-                    print("Got Password. Attempting to login.")
-                api = InstagramAPI(username, password)
-                api.login()
-                break
-
-            else:
+                    try:
+                        cl.login_by_sessionid(openJson()['sessionId'])
+                        print('Login | Logged in by sessionId')
+                        break
+                    except:
+                        while True:
+                            username = input("Login | Username: ")
+                            try:
+                                password = getpass(prompt="Login | Password: ")
+                            except Exception as error:
+                                print("Login | Error:", error)
+                            try:
+                                cl.login(username, password)
+                                print('Login | Logged in as {}'.format(cl.username))
+                                break
+                            except:
+                                print('Login | Bad password')
+                        writeJson('sessionId', cl.sessionid)
+                        print('Login | sessionId saved')
+                        break
+            break
+        else:
+            while True:
+                accounts = input("Login | Path: ")
                 try:
                     line = random.choice(open(accounts).readlines())
                     username, password = line.split(':')
-                    print("Username found: ", username)
-                    print("Password found: ", password)
-                    api = InstagramAPI(username, password)
-                    api.login()
+                    print("Login | Username found: ", username)
+                    cl.login(username, password)
                     break
-
                 except:
-                    print("Wrong file")
+                    print("Login | Wrong file")
+            break
 
+
+def start():
+    clear()
+    main()
+
+
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print(header)
+
+
+def bomber():
+    clear()
+    login()
+
+    while True:
         while True:
-            print("Would you prefer enter the user ID or the username (bêta)")
-            if input("UserID = i, Username = o: ") == "o":
-                user = input("Enter the victim's IG Username: ")
-                try:
-                    response = requests.get("https://www.instagram.com/" + user + "/?__a=1")
-                    respJSON = response.json()
-                    user_id = str(respJSON['graphql'].get("user").get("id"))
-                except:
-                    print("Unknown victim's username")
-                    print("Either Instagram API is not corrected or you entered a false username")
-                    exit(0)
+            modeChoice = input('| Use grabbed users ? (y/N): ')
+            user = ""
+            if modeChoice == "y":
+                user_id = openJson()['userList']
+                break
             else:
                 while True:
-                    user_id = input("Enter the victim's IG UserID (or press i to get more info about UserID): ")
-
-                    if isinstance(int(user_id), int) == True:
+                    user = input("| Victim username: ")
+                    try:
+                        user_id = cl.user_info_by_username(user).pk
                         break
-                    elif user_id == 'i':
-                        print("""To found a IG UserID you have to search https://www.instagram.com/{USERNAME}/?__a=1' and to go to graphql=>user=>id.
-The correct id is named id, not fbid.""")
-                        input("Press enter to continue")
-                    else:
-                        print("This IG UserID is unknown.")
+                    except:
+                        print('Bad username')
+                break
 
-            while True:
-                nostop = 0
-                message = input("Put the message you want the software send and press ENTER: ")
+        while True:
+            message = input("| Message: ")
+            times = 1
+            if modeChoice != "y":
                 while True:
                     try:
-                        times = int(input("How many messages do you want to send? "))
+                        times = int(input("| How many ?: "))
                         break
                     except:
                         print("Wrong number")
 
-                proxylist = input("Proxy list (TXT): (If you don't have proxy list press ENTER): ")
-                if accounts:
-                    proxy = random.choice(open(proxylist).readlines())
-                    api.setProxy(proxy)
-                while times > nostop:
-                    nostop = nostop + 1
-                    api.sendMessage(user_id, message)
-                    print(nostop, ">> Sent to", user_id, ": ", message)
+            # proxylist = input("Proxy list (TXT): (If you don't have proxy list press ENTER): ")
+            # if accounts:
+            #     proxy = random.choice(open(proxylist).readlines())
+            #     api.setProxy(proxy)
 
-except:
-    sys.exit(
-        '\nA critical error happened. Please make sure that you executed all commands properly and relaunch the program.')
+            try:
+                noStop = 0
+                if modeChoice == "y":
+                    for oneUser in user_id:
+                        noStop += 1
+                        cl.direct_send(message, [oneUser])
+                        print("({}) {} > {}: {}".format(noStop, cl.username, oneUser, message))
+                    break
+                else:
+                    while times > noStop:
+                        noStop += 1
+                        cl.direct_send(message, [user_id])
+                        print("({}) {} > {}: {}".format(noStop, cl.username, user, message))
+                    break
+
+            except:
+                start()
+
+
+def grabUser():
+    clear()
+    login()
+    print(grabbedMenu)
+
+    grabChoice = int(input("| "))
+    while True:
+        if grabChoice == 3:
+            start()
+            break
+        else:
+            while True:
+                user = input("| Grabbed username: ")
+                try:
+                    user_id = cl.user_info_by_username(user).pk
+
+                    if grabChoice == 1:
+                        grabFollowers = cl.user_followers(user_id)
+                        listFollowers = list(grabFollowers)
+                        intFollowers = list(map(int, listFollowers))
+                        writeJson('userList', intFollowers)
+                        print('{} followers of {} grabbed'.format(str(len(list(grabFollowers))), user))
+                    if grabChoice == 2:
+                        grabFollowing = cl.user_following(user_id)
+                        listFollowing = list(grabFollowing)
+                        intFollowing = list(map(int, listFollowing))
+                        writeJson('userList', intFollowing)
+                        print('{} followers of {} grabbed'.format(str(len(list(grabFollowing))), user))
+
+                    input('Continue...')
+                    clear()
+                    print(grabbedMenu)
+                    grabChoice = int(input("| "))
+                    break
+                except instagrapi.exceptions.UserNotFound:
+                    print('Bad username')
+
+                break
+
+
+def usToArray(us):
+    return str(len(us))
+
+
+def update():
+    os.system("git pull")
+
+
+def main():
+    print(mainMenu)
+    while True:
+        menuCursor = input("| ")
+        try:
+            if int(menuCursor) == 1:
+                bomber()
+            elif int(menuCursor) == 2:
+                grabUser()
+            elif int(menuCursor) == 3:
+                update()
+            elif int(menuCursor) == 4:
+                sys.exit()
+            else:
+                print("Wrong input")
+        except ValueError:
+            print("Wrong input")
+
+
+def writeJson(key, value):
+    with open('config.json', 'r+') as jsonFile:
+        data = json.load(jsonFile)
+        data[key] = value
+        jsonFile.seek(0)
+        json.dump(data, jsonFile, indent=4)
+        jsonFile.truncate()
+        jsonFile.close()
+
+
+def openJson():
+    with open('config.json', 'r') as jsonFile:
+        config = json.load(jsonFile)
+        jsonFile.close()
+        return config
+
+
+header = """
+██╗ ██████╗       ██████╗  ██████╗ ███╗   ███╗██████╗ ███████╗██████╗ 
+██║██╔════╝       ██╔══██╗██╔═══██╗████╗ ████║██╔══██╗██╔════╝██╔══██╗
+██║██║  ███╗█████╗██████╔╝██║   ██║██╔████╔██║██████╔╝█████╗  ██████╔╝
+██║██║   ██║╚════╝██╔══██╗██║   ██║██║╚██╔╝██║██╔══██╗██╔══╝  ██╔══██╗
+██║╚██████╔╝      ██████╔╝╚██████╔╝██║ ╚═╝ ██║██████╔╝███████╗██║  ██║
+╚═╝ ╚═════╝       ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝
+https://github.com/Gumbraise/instagram-bomber ╬ Ver. {}
+""".format(openJson()['version'])
+
+mainMenu = """
+ 1 | Instagram Bomber
+ 2 | Get User List
+ 3 | Update
+ 4 | Exit
+"""
+
+grabbedMenu = """
+ 1 | Grab Followers
+ 2 | Grab Following
+ 3 | Back
+"""
+
+print("Launching Instagram-Bomber...")
+update()
+clear()
+main()
