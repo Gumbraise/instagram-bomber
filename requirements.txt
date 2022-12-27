@@ -14,7 +14,7 @@ pycryptodomex==3.9.9
 pydantic==1.8.2
 PySocks==1.7.1
 requests==2.25.1
-setuptools==53.0.0
+setuptools==65.5.1
 tqdm==4.60.0
 typing-extensions==3.7.4.3
 urllib3==1.26.5
