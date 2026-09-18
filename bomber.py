@@ -173,10 +173,6 @@ def grabUser():
                 break
 
 
-def usToArray(us):
-    return str(len(us))
-
-
 def update():
     os.system("git pull")
 
