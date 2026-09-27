@@ -5,7 +5,15 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from bomber import ConfigStore, InstagramBomber
+from instagrapi.exceptions import ClientError
+
+from bomber import (
+    PROXY_MODE_ON_ERROR,
+    PROXY_MODE_PER_RECIPIENT,
+    ConfigStore,
+    InstagramBomber,
+    ProxyPool,
+)
 
 
 class FakeClient:
@@ -14,12 +22,20 @@ class FakeClient:
         self.sessionid = "new-session"
         self.sent: list[tuple[str, list[int]]] = []
         self.sessions: list[str] = []
+        self.proxies: list[str | None] = []
+        self.send_failures = 0
 
     def direct_send(self, message: str, user_ids: list[int]) -> None:
+        if self.send_failures:
+            self.send_failures -= 1
+            raise ClientError("temporary failure")
         self.sent.append((message, user_ids))
 
     def login_by_sessionid(self, session_id: str) -> None:
         self.sessions.append(session_id)
+
+    def set_proxy(self, proxy: str | None) -> None:
+        self.proxies.append(proxy)
 
 
 class FakeConfig:
@@ -39,6 +55,8 @@ class ConfigStoreTests(unittest.TestCase):
 
         self.assertEqual(store.load()["sessionId"], "")
         self.assertEqual(store.load()["userList"], [])
+        self.assertEqual(store.load()["proxies"], [])
+        self.assertEqual(store.load()["proxyMode"], PROXY_MODE_ON_ERROR)
 
         store.update("userList", [10, 20])
 
@@ -77,6 +95,54 @@ class InstagramBomberTests(unittest.TestCase):
         )
 
         self.assertEqual(app._saved_user_ids(), [10, 20])
+
+    def test_rotates_proxy_for_each_recipient(self) -> None:
+        client = FakeClient()
+        config = FakeConfig(
+            {
+                "proxies": ["http://proxy-one:8000", "http://proxy-two:8000"],
+                "proxyMode": PROXY_MODE_PER_RECIPIENT,
+            }
+        )
+        app = InstagramBomber(client=client, config=config)
+
+        with redirect_stdout(StringIO()):
+            app._send("hello", [(10, "first"), (20, "second"), (30, "third")])
+
+        self.assertEqual(
+            client.proxies,
+            [
+                "http://proxy-one:8000",
+                "http://proxy-two:8000",
+                "http://proxy-one:8000",
+            ],
+        )
+
+    def test_retries_with_next_proxy_after_client_error(self) -> None:
+        client = FakeClient()
+        client.send_failures = 1
+        config = FakeConfig(
+            {
+                "proxies": ["http://proxy-one:8000", "http://proxy-two:8000"],
+                "proxyMode": PROXY_MODE_ON_ERROR,
+            }
+        )
+        app = InstagramBomber(client=client, config=config)
+
+        with redirect_stdout(StringIO()):
+            count = app._send("hello", [(10, "first")])
+
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            client.proxies,
+            ["http://proxy-one:8000", "http://proxy-two:8000"],
+        )
+        self.assertEqual(client.sent, [("hello", [10])])
+
+    def test_hides_proxy_credentials_in_label(self) -> None:
+        pool = ProxyPool(["http://username:password@proxy.example:8080"])
+
+        self.assertEqual(pool.label(), "proxy.example:8080")
 
 
 if __name__ == "__main__":
