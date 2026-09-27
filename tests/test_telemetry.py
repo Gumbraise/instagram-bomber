@@ -56,6 +56,9 @@ class SentryReporterTests(unittest.TestCase):
         self.assertEqual(sdk.init_options["dsn"], "https://public@example.invalid/1")
         self.assertFalse(sdk.init_options["send_default_pii"])
         self.assertFalse(sdk.init_options["include_local_variables"])
+        logging_integration = sdk.init_options["integrations"][0]
+        self.assertIsNone(logging_integration._breadcrumb_handler)
+        self.assertIsNone(logging_integration._handler)
         self.assertEqual(sdk.init_options["traces_sample_rate"], 0.0)
         self.assertEqual(sdk.init_options["profiles_sample_rate"], 0.0)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 
 SENTRY_DSN = (
@@ -94,6 +95,13 @@ class SentryReporter:
             auto_session_tracking=False,
             auto_enabling_integrations=False,
             enable_logs=False,
+            integrations=[
+                LoggingIntegration(
+                    level=None,
+                    event_level=None,
+                    sentry_logs_level=None,
+                )
+            ],
             traces_sample_rate=0.0,
             profiles_sample_rate=0.0,
             max_breadcrumbs=0,
