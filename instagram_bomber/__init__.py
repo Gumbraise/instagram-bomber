@@ -1,11 +1,11 @@
-from instagram_bomber import (
+from .config import ConfigStore
+from .proxies import (
     PROXY_MODE_ON_ERROR,
     PROXY_MODE_PER_RECIPIENT,
     PROXY_MODES,
-    ConfigStore,
-    InstagramService,
     ProxyPool,
 )
+from .service import InstagramService
 
 __all__ = [
     "ConfigStore",
@@ -14,16 +14,4 @@ __all__ = [
     "PROXY_MODE_PER_RECIPIENT",
     "PROXY_MODES",
     "ProxyPool",
-    "main",
 ]
-
-
-def main() -> int:
-    from tui import BomberApp
-
-    BomberApp().run()
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
