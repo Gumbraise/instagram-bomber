@@ -54,11 +54,26 @@ Screen {
     border: round #b8f36b;
 }
 
-#main-menu > .option-list--option {
+#login-methods {
+    width: 64;
+    height: 8;
+    margin-top: 1;
+    padding: 0;
+    border: round #344253;
+    background: #0f151d;
+}
+
+#login-methods:focus {
+    border: round #b8f36b;
+}
+
+#main-menu > .option-list--option,
+#login-methods > .option-list--option {
     padding: 0 2;
 }
 
-#main-menu > .option-list--option-highlighted {
+#main-menu > .option-list--option-highlighted,
+#login-methods > .option-list--option-highlighted {
     background: #243226;
     color: #caff82;
     text-style: bold;
@@ -84,8 +99,12 @@ Screen {
     border-top: solid #344253;
 }
 
-.login-panel {
-    height: 15;
+.credentials-panel {
+    height: 12;
+}
+
+.account-panel {
+    height: 9;
 }
 
 .send-panel {
@@ -162,12 +181,14 @@ RichLog {
 }
 
 #login-loading,
+#account-loading,
 #verification-loading,
 #update-loading {
     height: 3;
 }
 
 #login-status,
+#account-status,
 #verification-status,
 #update-status,
 #proxy-summary,
