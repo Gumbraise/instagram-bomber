@@ -76,6 +76,16 @@ username:password
 
 When an account file is used, one non-empty line is selected at random.
 
+## Two-factor authentication
+
+When Instagram's CAA login flow requests two-factor verification, the login
+view is replaced by a dedicated verification screen. Enter the code from the
+authenticator application, SMS, or Instagram prompt and select `Verify`.
+
+An invalid or expired code keeps the verification screen open so another code
+can be entered. The password and verification code are cleared from the UI
+after success or when returning to the login screen.
+
 ## Proxies
 
 Choose `Configure Proxies` from the main menu. Enter either one proxy directly:
@@ -100,15 +110,17 @@ The application offers two rotation modes:
 
 The first configured proxy is always applied before login. Select `Disable` in
 the proxy configuration screen to stop using proxies. Proxy passwords are
-hidden in terminal messages, but the complete proxy addresses are stored in
-`config.json`.
+hidden in terminal messages, but the complete proxy addresses are stored in the
+local `config.json`.
 
 A failed message may have reached Instagram before the client received the
 error. Retrying it with another proxy can therefore produce a duplicate.
 
 ## Configuration
 
-[`config.json`](config.json) stores:
+The application creates a local `config.json` automatically from the defaults
+in [`config.example.json`](config.example.json). The runtime file is ignored by
+Git because it stores credentials and account data:
 
 - `version`: the version displayed in the header;
 - `sessionId`: the Instagram session reused on the next login;
@@ -116,8 +128,8 @@ error. Retrying it with another proxy can therefore produce a duplicate.
 - `proxies`: the configured proxy addresses;
 - `proxyMode`: either `per_recipient` or `on_error`.
 
-The session ID grants access to the associated account. Keep the configuration
-file private and clear `sessionId` before sharing it.
+The session ID grants access to the associated account. Keep `config.json`
+private and do not force-add it to Git.
 
 ## Tests
 
