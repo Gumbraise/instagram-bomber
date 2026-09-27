@@ -1,0 +1,175 @@
+Screen {
+    layout: vertical;
+    overflow: hidden;
+    background: #0b0f14;
+    color: #d7dee7;
+}
+
+#app-header {
+    dock: top;
+    height: 3;
+    padding: 1 2;
+    background: #111821;
+    border-bottom: solid #283341;
+}
+
+#screen-body {
+    height: 1fr;
+    padding: 2 4;
+}
+
+#menu-body,
+#boot-body {
+    height: 1fr;
+    align: center middle;
+    padding: 1 4;
+}
+
+.screen-title {
+    width: 100%;
+    height: 2;
+    content-align: center middle;
+    text-style: bold;
+    color: #e8edf2;
+}
+
+.muted {
+    width: 100%;
+    height: auto;
+    content-align: center middle;
+    color: #7f8b99;
+}
+
+#main-menu {
+    width: 64;
+    height: 17;
+    margin-top: 1;
+    padding: 1;
+    border: round #344253;
+    background: #0f151d;
+}
+
+#main-menu:focus {
+    border: round #b8f36b;
+}
+
+#main-menu > .option-list--option {
+    padding: 1 2;
+}
+
+#main-menu > .option-list--option-highlighted {
+    background: #243226;
+    color: #caff82;
+    text-style: bold;
+}
+
+#prompt-bar {
+    dock: bottom;
+    width: 100%;
+    height: 3;
+    padding: 1 2;
+    background: #111821;
+    color: #8e9aa8;
+    border-top: solid #283341;
+}
+
+#prompt-panel {
+    dock: bottom;
+    width: 100%;
+    height: auto;
+    padding: 1 2 0 2;
+    background: #111821;
+    border-top: solid #344253;
+}
+
+.login-panel {
+    height: 13;
+}
+
+.send-panel {
+    height: 14;
+}
+
+.grab-panel,
+.proxy-panel {
+    height: 11;
+}
+
+.button-row {
+    width: 100%;
+    height: 3;
+    align-horizontal: right;
+}
+
+.button-row Button {
+    min-width: 14;
+    margin-left: 1;
+}
+
+Input {
+    width: 100%;
+    margin-bottom: 1;
+    background: #0b0f14;
+    border: tall #344253;
+}
+
+Input:focus {
+    border: tall #b8f36b;
+}
+
+Checkbox {
+    height: 2;
+    color: #aab5c1;
+}
+
+RadioSet {
+    layout: horizontal;
+    width: 100%;
+    height: 3;
+    background: transparent;
+    border: none;
+}
+
+RadioButton {
+    width: 1fr;
+}
+
+.prompt-help {
+    width: 100%;
+    height: 1;
+    content-align: right middle;
+    color: #7f8b99;
+}
+
+RichLog {
+    height: 1fr;
+    margin: 1 0;
+    padding: 1;
+    background: #0f151d;
+    border: round #283341;
+    scrollbar-color: #46576a;
+}
+
+.status-line {
+    height: 2;
+    color: #9aa7b4;
+}
+
+#login-loading,
+#update-loading {
+    height: 3;
+}
+
+#login-status,
+#update-status,
+#proxy-summary,
+#boot-status {
+    width: 100%;
+    height: auto;
+    content-align: center middle;
+    color: #9aa7b4;
+}
+
+#boot-body Button {
+    margin-top: 1;
+}
