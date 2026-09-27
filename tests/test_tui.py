@@ -8,9 +8,11 @@ from bomber import PROXY_MODE_ON_ERROR
 from tui import (
     AccountListLoginScreen,
     BomberApp,
+    ConsentScreen,
     CredentialsLoginScreen,
     LoginScreen,
     MainMenuScreen,
+    PrivacyScreen,
     ProxyScreen,
     SendScreen,
     VerificationScreen,
@@ -30,7 +32,30 @@ class FakeService:
     version = "2.1"
     username = "not connected"
     has_saved_session = False
+    analytics_consent = False
     proxy_pool = FakeProxyPool()
+
+    def set_analytics_consent(self, consent: bool) -> None:
+        self.analytics_consent = consent
+
+
+class FakeReporter:
+    def __init__(self) -> None:
+        self.active = False
+        self.events: list[tuple[str, ...]] = []
+
+    def enable(self, release: str) -> None:
+        self.active = True
+        self.events.append(("enable", release))
+
+    def disable(self) -> None:
+        self.active = False
+        self.events.append(("disable",))
+
+
+class ConsentService(FakeService):
+    def __init__(self, consent: bool | None) -> None:
+        self.analytics_consent = consent
 
 
 class TwoFactorService(FakeService):
@@ -76,6 +101,60 @@ class AccountListService(FakeService):
 
 
 class BomberAppTests(unittest.IsolatedAsyncioTestCase):
+    async def test_first_launch_waits_for_analytics_consent(self) -> None:
+        service = ConsentService(None)
+        reporter = FakeReporter()
+        app = BomberApp(
+            service=service,
+            reporter=reporter,
+            auto_update=False,
+        )
+
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+
+            self.assertIsInstance(app.screen, ConsentScreen)
+            self.assertEqual(reporter.events, [])
+
+            await pilot.click("#consent-decline")
+            await pilot.pause()
+
+            self.assertIsInstance(app.screen, MainMenuScreen)
+            self.assertFalse(service.analytics_consent)
+            self.assertEqual(reporter.events, [("disable",)])
+
+    async def test_analytics_consent_can_change_from_menu(self) -> None:
+        service = ConsentService(False)
+        reporter = FakeReporter()
+        app = BomberApp(
+            service=service,
+            reporter=reporter,
+            auto_update=False,
+        )
+
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            menu = app.screen.query_one("#main-menu", OptionList)
+            menu.highlighted = 4
+            await pilot.press("enter")
+
+            self.assertIsInstance(app.screen, PrivacyScreen)
+            await pilot.click("#privacy-allow")
+            self.assertTrue(service.analytics_consent)
+            self.assertTrue(reporter.active)
+
+            await pilot.click("#privacy-decline")
+            self.assertFalse(service.analytics_consent)
+            self.assertFalse(reporter.active)
+            self.assertEqual(
+                reporter.events,
+                [
+                    ("disable",),
+                    ("enable", "instagram-bomber@2.1"),
+                    ("disable",),
+                ],
+            )
+
     async def test_keyboard_navigation_replaces_current_screen(self) -> None:
         app = BomberApp(service=FakeService(), auto_update=False)
 

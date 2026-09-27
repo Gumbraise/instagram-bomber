@@ -67,6 +67,7 @@ class ConfigStoreTests(unittest.TestCase):
         data = ConfigStore(path).load()
 
         self.assertTrue(path.exists())
+        self.assertIsNone(data["analyticsConsent"])
         self.assertEqual(data["sessionId"], "")
         self.assertEqual(data["proxies"], [])
 
@@ -77,6 +78,7 @@ class ConfigStoreTests(unittest.TestCase):
         store = ConfigStore(path)
 
         self.assertEqual(store.load()["sessionId"], "")
+        self.assertIsNone(store.load()["analyticsConsent"])
         self.assertEqual(store.load()["userList"], [])
         self.assertEqual(store.load()["proxies"], [])
         self.assertEqual(store.load()["proxyMode"], PROXY_MODE_ON_ERROR)
@@ -85,6 +87,20 @@ class ConfigStoreTests(unittest.TestCase):
 
         saved = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(saved["userList"], [10, 20])
+
+    def test_persists_analytics_consent(self) -> None:
+        path = Path(__file__).with_name(".consent-test-config.json")
+        self.addCleanup(path.unlink, missing_ok=True)
+        service = InstagramService(
+            client=FakeClient(),
+            config=ConfigStore(path),
+        )
+
+        self.assertIsNone(service.analytics_consent)
+
+        service.set_analytics_consent(False)
+
+        self.assertFalse(service.analytics_consent)
 
 
 class InstagramBomberTests(unittest.TestCase):
