@@ -33,7 +33,7 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
     async def test_keyboard_navigation_replaces_current_screen(self) -> None:
         app = BomberApp(service=FakeService(), auto_update=False)
 
-        async with app.run_test(size=(100, 36)) as pilot:
+        async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             self.assertIsInstance(app.screen, MainMenuScreen)
             self.assertEqual(len(app.screen_stack), 2)
@@ -51,7 +51,7 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
     async def test_mouse_selects_menu_and_password_is_hidden(self) -> None:
         app = BomberApp(service=FakeService(), auto_update=False)
 
-        async with app.run_test(size=(100, 36)) as pilot:
+        async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             await pilot.click("#main-menu", offset=(5, 2))
 
@@ -63,7 +63,7 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
         app = BomberApp(service=FakeService(), auto_update=False)
         app.authenticated = True
 
-        async with app.run_test(size=(100, 36)) as pilot:
+        async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             menu = app.screen.query_one("#main-menu", OptionList)
             menu.highlighted = 0

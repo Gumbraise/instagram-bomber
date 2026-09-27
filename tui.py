@@ -110,11 +110,11 @@ class MainMenuScreen(BomberScreen):
                 classes="muted",
             )
             yield OptionList(
-                Option("Send messages", id="send"),
-                Option("Collect users", id="grab"),
-                Option("Configure proxies", id="proxy"),
-                Option("Update repository", id="update"),
-                Option("Exit", id="exit"),
+                Option("Send messages\n", id="send"),
+                Option("Collect users\n", id="grab"),
+                Option("Configure proxies\n", id="proxy"),
+                Option("Update repository\n", id="update"),
+                Option("Exit\n", id="exit"),
                 id="main-menu",
             )
         yield Static(

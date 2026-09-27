@@ -8,14 +8,15 @@ Screen {
 #app-header {
     dock: top;
     height: 3;
-    padding: 1 2;
+    padding: 0 2;
+    content-align-vertical: middle;
     background: #111821;
     border-bottom: solid #283341;
 }
 
 #screen-body {
     height: 1fr;
-    padding: 2 4;
+    padding: 1 2;
 }
 
 #menu-body,
@@ -42,9 +43,9 @@ Screen {
 
 #main-menu {
     width: 64;
-    height: 17;
+    height: 12;
     margin-top: 1;
-    padding: 1;
+    padding: 0;
     border: round #344253;
     background: #0f151d;
 }
@@ -54,7 +55,7 @@ Screen {
 }
 
 #main-menu > .option-list--option {
-    padding: 1 2;
+    padding: 0 2;
 }
 
 #main-menu > .option-list--option-highlighted {
@@ -67,7 +68,8 @@ Screen {
     dock: bottom;
     width: 100%;
     height: 3;
-    padding: 1 2;
+    padding: 0 2;
+    content-align-vertical: middle;
     background: #111821;
     color: #8e9aa8;
     border-top: solid #283341;
@@ -83,16 +85,16 @@ Screen {
 }
 
 .login-panel {
-    height: 13;
+    height: 15;
 }
 
 .send-panel {
-    height: 14;
+    height: 17;
 }
 
 .grab-panel,
 .proxy-panel {
-    height: 11;
+    height: 12;
 }
 
 .button-row {
@@ -108,7 +110,7 @@ Screen {
 
 Input {
     width: 100%;
-    margin-bottom: 1;
+    margin-bottom: 0;
     background: #0b0f14;
     border: tall #344253;
 }
