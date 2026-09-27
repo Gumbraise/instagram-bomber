@@ -51,6 +51,12 @@ Run the application from the repository root:
 python bomber.py
 ```
 
+It can also be launched as a package:
+
+```console
+python -m instagram_bomber
+```
+
 The application opens in a full-screen terminal interface and runs `git pull`
 on its startup screen. On the first launch, a privacy screen is shown before
 the startup update or any Sentry initialization.
@@ -110,6 +116,24 @@ Instagram sessions, verification codes, proxy credentials, tokens, and direct
 message content. The report retains diagnostic details such as the application
 version, Python and operating-system information, exception type, and filtered
 stack frames. Sentry's US endpoint receives the connection IP address.
+
+## Project structure
+
+The application code lives in the `instagram_bomber` package:
+
+- `config.py` owns local configuration defaults and persistence;
+- `proxies.py` contains proxy modes and rotation state;
+- `service.py` contains Instagram operations and retry behavior;
+- `telemetry.py` configures and filters Sentry events;
+- `cli.py` is the package command-line entry point;
+- `tui/app.py` coordinates application state and screen navigation;
+- `tui/startup.py`, `tui/auth.py`, `tui/actions.py`, and `tui/settings.py`
+  group terminal screens by responsibility;
+- `tui/base.py` contains the shared screen behavior and `tui/styles.tcss`
+  contains the terminal theme.
+
+The root `bomber.py`, `tui.py`, and `telemetry.py` files are small compatibility
+entry points. New code should import from `instagram_bomber`.
 
 ## Proxies
 
