@@ -52,7 +52,8 @@ python bomber.py
 ```
 
 The application opens in a full-screen terminal interface and runs `git pull`
-on its startup screen.
+on its startup screen. On the first launch, a privacy screen is shown before
+the startup update or any Sentry initialization.
 
 ## Terminal navigation
 
@@ -94,6 +95,22 @@ An invalid or expired code keeps the verification screen open so another code
 can be entered. The password and verification code are cleared from the UI
 after success or when returning to the login screen.
 
+## Error reporting
+
+The first launch asks whether filtered application error reports may be sent to
+Sentry. Selecting `Decline` leaves the SDK disabled and sends no Sentry events.
+The choice is stored locally and can be changed later with `Error reporting` in
+the main menu.
+
+When enabled, reporting is limited to unhandled errors. Performance traces,
+profiles, logs, sessions, breadcrumbs, default PII, local variables, and source
+context are disabled. Before an event is sent, the client also removes account
+identities, request data, exception messages, absolute paths, passwords,
+Instagram sessions, verification codes, proxy credentials, tokens, and direct
+message content. The report retains diagnostic details such as the application
+version, Python and operating-system information, exception type, and filtered
+stack frames. Sentry's US endpoint receives the connection IP address.
+
 ## Proxies
 
 Choose `Configure Proxies` from the main menu. Enter either one proxy directly:
@@ -131,6 +148,8 @@ in [`config.example.json`](config.example.json). The runtime file is ignored by
 Git because it stores credentials and account data:
 
 - `version`: the version displayed in the header;
+- `analyticsConsent`: `true` or `false` after the first-launch privacy choice,
+  or `null` while no choice has been made;
 - `sessionId`: the Instagram session reused on the next login;
 - `userList`: the numeric IDs collected from followers or following users;
 - `proxies`: the configured proxy addresses;
