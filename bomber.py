@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 import subprocess
 from dataclasses import dataclass
-from getpass import getpass
 from pathlib import Path
 from typing import Any, Callable, Iterable, TypeVar
 
 from instagrapi import Client
-from instagrapi.exceptions import ClientError, UserNotFound
+from instagrapi.exceptions import ClientError
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,31 +16,9 @@ CONFIG_PATH = BASE_DIR / "config.json"
 PROXY_MODE_PER_RECIPIENT = "per_recipient"
 PROXY_MODE_ON_ERROR = "on_error"
 PROXY_MODES = {PROXY_MODE_PER_RECIPIENT, PROXY_MODE_ON_ERROR}
+
 ReturnType = TypeVar("ReturnType")
-
-HEADER = r"""
-██╗ ██████╗       ██████╗  ██████╗ ███╗   ███╗██████╗ ███████╗██████╗
-██║██╔════╝       ██╔══██╗██╔═══██╗████╗ ████║██╔══██╗██╔════╝██╔══██╗
-██║██║  ███╗█████╗██████╔╝██║   ██║██╔████╔██║██████╔╝█████╗  ██████╔╝
-██║██║   ██║╚════╝██╔══██╗██║   ██║██║╚██╔╝██║██╔══██╗██╔══╝  ██╔══██╗
-██║╚██████╔╝      ██████╔╝╚██████╔╝██║ ╚═╝ ██║██████╔╝███████╗██║  ██║
-╚═╝ ╚═════╝       ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═════╝ ╚══════╝╚═╝  ╚═╝
-https://github.com/Gumbraise/instagram-bomber ╬ Ver. {version}
-"""
-
-MAIN_MENU = """
- 1 | Instagram Bomber
- 2 | Get User List
- 3 | Update
- 4 | Configure Proxies
- 5 | Exit
-"""
-
-GRAB_MENU = """
- 1 | Grab Followers
- 2 | Grab Following
- 3 | Back
-"""
+StatusCallback = Callable[[str], None]
 
 
 @dataclass
@@ -53,7 +29,7 @@ class ConfigStore:
         with self.path.open(encoding="utf-8") as config_file:
             data = json.load(config_file)
 
-        data.setdefault("version", "2.0")
+        data.setdefault("version", "2.1")
         data.setdefault("sessionId", "")
         data.setdefault("userList", [])
         data.setdefault("proxies", [])
@@ -118,222 +94,233 @@ class ProxyPool:
         return proxy.rsplit("@", maxsplit=1)[-1]
 
 
-class InstagramBomber:
+class InstagramService:
     def __init__(
         self,
         client: Client | None = None,
         config: ConfigStore | None = None,
     ) -> None:
-        self.client = client or Client()
-        self.config = config or ConfigStore()
+        self.client = client if client is not None else Client()
+        self.config = config if config is not None else ConfigStore()
         self.proxy_pool = ProxyPool.from_config(self.config.load())
         self.proxy_pool.apply(self.client)
 
-    def clear(self) -> None:
-        os.system("cls" if os.name == "nt" else "clear")
-        version = self.config.load()["version"]
-        print(HEADER.format(version=version))
+    @property
+    def version(self) -> str:
+        return str(self.config.load()["version"])
 
-    def login(self) -> None:
-        if self.proxy_pool.current:
-            print(f"Proxy | Using {self.proxy_pool.label()}")
+    @property
+    def username(self) -> str:
+        return str(self.client.username or "not connected")
 
-        has_account_list = input(
-            "Login | Do you have an account list? (y/N): "
-        ).strip().lower()
+    @property
+    def has_saved_session(self) -> bool:
+        return bool(self.config.load()["sessionId"])
 
-        if has_account_list == "y":
-            self._login_from_account_list()
-            return
-
+    def login_saved_session(self, status: StatusCallback | None = None) -> bool:
         session_id = str(self.config.load()["sessionId"])
-        if session_id:
-            try:
-                self._instagram_call(
-                    lambda: self.client.login_by_sessionid(session_id)
-                )
-                print("Login | Logged in by sessionId")
-                return
-            except ClientError as error:
-                print(f"Login | Saved session rejected: {error}")
+        if not session_id:
+            return False
 
-        self._login_with_credentials()
+        self._report(status, "Restoring saved Instagram session…")
+        self._instagram_call(
+            lambda: self.client.login_by_sessionid(session_id),
+            status,
+        )
+        self._report(status, f"Connected as {self.username}")
+        return True
 
-    def _login_with_credentials(self) -> None:
-        while True:
-            username = input("Login | Username: ").strip()
-            password = getpass("Login | Password: ")
+    def login_credentials(
+        self,
+        username: str,
+        password: str,
+        status: StatusCallback | None = None,
+    ) -> None:
+        if not username or not password:
+            raise ValueError("username and password are required")
 
-            try:
-                self._instagram_call(lambda: self.client.login(username, password))
-            except ClientError as error:
-                print(f"Login | Failed: {error}")
-                continue
+        self._report(status, f"Connecting as {username}…")
+        self._instagram_call(
+            lambda: self.client.login(username, password),
+            status,
+        )
+        self.config.update("sessionId", self.client.sessionid)
+        self._report(status, f"Connected as {self.username}; session saved")
 
-            self.config.update("sessionId", self.client.sessionid)
-            print(f"Login | Logged in as {self.client.username}")
-            print("Login | sessionId saved")
-            return
+    def login_account_file(
+        self,
+        path: Path,
+        status: StatusCallback | None = None,
+    ) -> None:
+        accounts = [
+            line
+            for line in path.expanduser().read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        if not accounts:
+            raise ValueError("the account file is empty")
 
-    def _login_from_account_list(self) -> None:
-        while True:
-            path = Path(input("Login | Path: ").strip()).expanduser()
-            try:
-                accounts = [
-                    line
-                    for line in path.read_text(encoding="utf-8").splitlines()
-                    if line.strip()
-                ]
-                account = random.choice(accounts)
-                username, password = account.split(":", maxsplit=1)
-                username = username.strip()
-                if not username or not password:
-                    raise ValueError("empty username or password")
-                print(f"Login | Username found: {username}")
-                self._instagram_call(lambda: self.client.login(username, password))
-                return
-            except (OSError, ValueError, IndexError, ClientError) as error:
-                print(f"Login | Could not use account list: {error}")
+        account = random.choice(accounts)
+        username, password = account.split(":", maxsplit=1)
+        username = username.strip()
+        if not username or not password:
+            raise ValueError("the selected account is invalid")
 
-    def bomber(self) -> None:
-        self.clear()
-        self.login()
+        self.login_credentials(username, password, status)
 
-        while True:
-            use_grabbed_users = input("| Use grabbed users? (y/N): ").strip().lower()
+    def send_to_username(
+        self,
+        username: str,
+        message: str,
+        count: int,
+        status: StatusCallback | None = None,
+    ) -> int:
+        if not username:
+            raise ValueError("a target username is required")
+        if not message:
+            raise ValueError("a message is required")
+        if count < 1:
+            raise ValueError("the message count must be greater than zero")
 
-            try:
-                if use_grabbed_users == "y":
-                    user_ids = self._saved_user_ids()
-                    message = input("| Message: ")
-                    recipients = ((user_id, str(user_id)) for user_id in user_ids)
-                else:
-                    username, user_id = self._prompt_for_user("| Victim username: ")
-                    message = input("| Message: ")
-                    count = self._prompt_for_positive_integer("| How many?: ")
-                    recipients = ((user_id, username) for _ in range(count))
-                self._send(message, recipients)
-            except (ClientError, ValueError) as error:
-                print(f"Send | Failed: {error}")
-                return
+        self._report(status, f"Looking up @{username}…")
+        user = self._instagram_call(
+            lambda: self.client.user_info_by_username(username),
+            status,
+        )
+        user_id = int(user.pk)
+        recipients = ((user_id, f"@{username}") for _ in range(count))
+        return self._send(message, recipients, status)
+
+    def send_to_saved_users(
+        self,
+        message: str,
+        status: StatusCallback | None = None,
+    ) -> int:
+        if not message:
+            raise ValueError("a message is required")
+
+        user_ids = self._saved_user_ids()
+        if not user_ids:
+            raise ValueError("no collected users are available")
+        recipients = ((user_id, str(user_id)) for user_id in user_ids)
+        return self._send(message, recipients, status)
+
+    def grab_users(
+        self,
+        username: str,
+        relation: str,
+        status: StatusCallback | None = None,
+    ) -> int:
+        if not username:
+            raise ValueError("a username is required")
+        if relation not in {"followers", "following"}:
+            raise ValueError("relation must be followers or following")
+
+        self._report(status, f"Looking up @{username}…")
+        user = self._instagram_call(
+            lambda: self.client.user_info_by_username(username),
+            status,
+        )
+        user_id = int(user.pk)
+
+        self._report(status, f"Loading {relation} for @{username}…")
+        if relation == "followers":
+            users = self._instagram_call(
+                lambda: self.client.user_followers(user_id),
+                status,
+            )
+        else:
+            users = self._instagram_call(
+                lambda: self.client.user_following(user_id),
+                status,
+            )
+
+        user_ids = [int(grabbed_user_id) for grabbed_user_id in users]
+        self.config.update("userList", user_ids)
+        self._report(status, f"Saved {len(user_ids)} {relation} from @{username}")
+        return len(user_ids)
+
+    def configure_proxies(self, proxies: Iterable[str], mode: str) -> int:
+        if mode not in PROXY_MODES:
+            raise ValueError("invalid proxy mode")
+
+        normalized = list(
+            dict.fromkeys(proxy.strip() for proxy in proxies if proxy.strip())
+        )
+        if not normalized:
+            raise ValueError("at least one proxy is required")
+
+        self.proxy_pool = ProxyPool(proxies=normalized, mode=mode)
+        self.proxy_pool.apply(self.client)
+        self.config.update_many({"proxies": normalized, "proxyMode": mode})
+        return len(normalized)
+
+    def configure_proxies_from_source(self, source: str, mode: str) -> int:
+        if not source.strip():
+            raise ValueError("a proxy or proxy list path is required")
+
+        source_path = Path(source).expanduser()
+        proxies = (
+            source_path.read_text(encoding="utf-8").splitlines()
+            if source_path.is_file()
+            else [source]
+        )
+        return self.configure_proxies(proxies, mode)
+
+    def disable_proxies(self) -> None:
+        self.proxy_pool = ProxyPool([])
+        self.client.set_proxy(None)
+        self.config.update_many(
+            {"proxies": [], "proxyMode": PROXY_MODE_ON_ERROR}
+        )
+
+    def update_repository(self, status: StatusCallback | None = None) -> bool:
+        self._report(status, "Checking for updates…")
+        result = subprocess.run(
+            ["git", "pull"],
+            cwd=BASE_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        output = (result.stdout or result.stderr).strip()
+        if output:
+            self._report(status, output)
+        if result.returncode != 0:
+            raise RuntimeError("git pull failed")
+        return True
 
     def _saved_user_ids(self) -> list[int]:
         saved_users = self.config.load()["userList"]
         if not isinstance(saved_users, list):
             raise ValueError("config.json userList must be a list")
-        if not saved_users:
-            print("Send | No grabbed users found")
         return [int(user_id) for user_id in saved_users]
 
-    def _prompt_for_user(self, prompt: str) -> tuple[str, int]:
-        while True:
-            username = input(prompt).strip()
-            try:
-                user = self._instagram_call(
-                    lambda: self.client.user_info_by_username(username)
-                )
-                user_id = int(user.pk)
-                return username, user_id
-            except UserNotFound:
-                print("User | Username not found")
-            except ClientError as error:
-                print(f"User | Lookup failed: {error}")
-
-    def _send(self, message: str, recipients: Iterable[tuple[int, str]]) -> int:
+    def _send(
+        self,
+        message: str,
+        recipients: Iterable[tuple[int, str]],
+        status: StatusCallback | None = None,
+    ) -> int:
         sent = 0
         for sent, (user_id, label) in enumerate(recipients, start=1):
             if sent > 1 and self.proxy_pool.mode == PROXY_MODE_PER_RECIPIENT:
                 if self.proxy_pool.rotate(self.client):
-                    print(f"Proxy | Switched to {self.proxy_pool.label()}")
+                    self._report(
+                        status,
+                        f"Proxy switched to {self.proxy_pool.label()}",
+                    )
             self._instagram_call(
-                lambda: self.client.direct_send(message, user_ids=[user_id])
+                lambda: self.client.direct_send(message, user_ids=[user_id]),
+                status,
             )
-            print(f"({sent}) {self.client.username} > {label}: {message}")
+            self._report(status, f"{sent}. {self.username} → {label}: {message}")
         return sent
-
-    def grab_users(self) -> None:
-        self.clear()
-        self.login()
-
-        while True:
-            print(GRAB_MENU)
-            choice = self._prompt_for_choice("| ", {1, 2, 3})
-            if choice == 3:
-                return
-
-            username, user_id = self._prompt_for_user("| Grabbed username: ")
-            try:
-                if choice == 1:
-                    users = self._instagram_call(
-                        lambda: self.client.user_followers(user_id)
-                    )
-                    relation = "followers"
-                else:
-                    users = self._instagram_call(
-                        lambda: self.client.user_following(user_id)
-                    )
-                    relation = "following"
-            except ClientError as error:
-                print(f"Grab | Failed: {error}")
-                continue
-
-            user_ids = [int(grabbed_user_id) for grabbed_user_id in users]
-            self.config.update("userList", user_ids)
-            print(f"Grab | Saved {len(user_ids)} {relation} of {username}")
-            input("Continue...")
-            self.clear()
-
-    def configure_proxies(self) -> None:
-        print(
-            "Proxy | Enter one proxy or the path to a text file. "
-            "Leave empty to disable proxies."
-        )
-        source = input("| Proxy or list path: ").strip()
-
-        if not source:
-            self.proxy_pool = ProxyPool([])
-            self.client.set_proxy(None)
-            self.config.update_many(
-                {"proxies": [], "proxyMode": PROXY_MODE_ON_ERROR}
-            )
-            print("Proxy | Disabled")
-            return
-
-        source_path = Path(source).expanduser()
-        try:
-            if source_path.is_file():
-                candidates = source_path.read_text(encoding="utf-8").splitlines()
-            else:
-                candidates = [source]
-        except OSError as error:
-            print(f"Proxy | Could not read list: {error}")
-            return
-
-        proxies = list(
-            dict.fromkeys(proxy.strip() for proxy in candidates if proxy.strip())
-        )
-        if not proxies:
-            print("Proxy | No proxy found")
-            return
-
-        print(" 1 | Rotate for every recipient")
-        print(" 2 | Rotate after an Instagram error")
-        choice = self._prompt_for_choice("| ", {1, 2})
-        mode = (
-            PROXY_MODE_PER_RECIPIENT if choice == 1 else PROXY_MODE_ON_ERROR
-        )
-
-        self.proxy_pool = ProxyPool(proxies=proxies, mode=mode)
-        self.proxy_pool.apply(self.client)
-        self.config.update_many({"proxies": proxies, "proxyMode": mode})
-        print(
-            f"Proxy | Loaded {len(proxies)} proxy(s); "
-            f"using {self.proxy_pool.label()}"
-        )
 
     def _instagram_call(
         self,
         operation: Callable[[], ReturnType],
+        status: StatusCallback | None = None,
     ) -> ReturnType:
         attempts = (
             len(self.proxy_pool.proxies)
@@ -349,70 +336,23 @@ class InstagramBomber:
                 is_last_attempt = attempt == attempts - 1
                 if is_last_attempt or not self.proxy_pool.rotate(self.client):
                     raise
-                print(f"Proxy | Error received, switched to {self.proxy_pool.label()}")
+                self._report(
+                    status,
+                    f"Request failed; switched to {self.proxy_pool.label()}",
+                )
 
         raise RuntimeError("Instagram operation ended without a result")
 
-    def update_repository(self) -> None:
-        result = subprocess.run(
-            ["git", "pull"],
-            cwd=BASE_DIR,
-            check=False,
-        )
-        if result.returncode != 0:
-            print("Update | git pull failed")
-
-    def run(self) -> None:
-        while True:
-            print(MAIN_MENU)
-            choice = self._prompt_for_choice("| ", {1, 2, 3, 4, 5})
-
-            if choice == 1:
-                self.bomber()
-            elif choice == 2:
-                self.grab_users()
-            elif choice == 3:
-                self.update_repository()
-            elif choice == 4:
-                self.configure_proxies()
-            else:
-                return
-
     @staticmethod
-    def _prompt_for_choice(prompt: str, choices: set[int]) -> int:
-        while True:
-            try:
-                choice = int(input(prompt))
-            except ValueError:
-                print("Wrong input")
-                continue
-            if choice in choices:
-                return choice
-            print("Wrong input")
-
-    @staticmethod
-    def _prompt_for_positive_integer(prompt: str) -> int:
-        while True:
-            try:
-                value = int(input(prompt))
-            except ValueError:
-                print("Wrong number")
-                continue
-            if value > 0:
-                return value
-            print("Number must be greater than zero")
+    def _report(status: StatusCallback | None, message: str) -> None:
+        if status is not None:
+            status(message)
 
 
 def main() -> int:
-    app = InstagramBomber()
-    print("Launching Instagram-Bomber...")
-    app.update_repository()
-    app.clear()
+    from tui import BomberApp
 
-    try:
-        app.run()
-    except KeyboardInterrupt:
-        print("\nStopped")
+    BomberApp().run()
     return 0
 
 

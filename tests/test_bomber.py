@@ -3,15 +3,13 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
-
 from instagrapi.exceptions import ClientError
 
 from bomber import (
     PROXY_MODE_ON_ERROR,
     PROXY_MODE_PER_RECIPIENT,
     ConfigStore,
-    InstagramBomber,
+    InstagramService,
     ProxyPool,
 )
 
@@ -68,16 +66,16 @@ class InstagramBomberTests(unittest.TestCase):
     def test_reuses_saved_session(self) -> None:
         client = FakeClient()
         config = FakeConfig({"sessionId": "saved-session"})
-        app = InstagramBomber(client=client, config=config)
+        service = InstagramService(client=client, config=config)
 
-        with patch("builtins.input", return_value=""), redirect_stdout(StringIO()):
-            app.login()
+        restored = service.login_saved_session()
 
+        self.assertTrue(restored)
         self.assertEqual(client.sessions, ["saved-session"])
 
     def test_sends_each_message_to_expected_recipient(self) -> None:
         client = FakeClient()
-        app = InstagramBomber(client=client, config=FakeConfig({}))
+        app = InstagramService(client=client, config=FakeConfig({}))
 
         with redirect_stdout(StringIO()):
             count = app._send("hello", [(10, "first"), (20, "second")])
@@ -89,7 +87,7 @@ class InstagramBomberTests(unittest.TestCase):
         )
 
     def test_normalizes_saved_user_ids(self) -> None:
-        app = InstagramBomber(
+        app = InstagramService(
             client=FakeClient(),
             config=FakeConfig({"userList": ["10", 20]}),
         )
@@ -104,7 +102,7 @@ class InstagramBomberTests(unittest.TestCase):
                 "proxyMode": PROXY_MODE_PER_RECIPIENT,
             }
         )
-        app = InstagramBomber(client=client, config=config)
+        app = InstagramService(client=client, config=config)
 
         with redirect_stdout(StringIO()):
             app._send("hello", [(10, "first"), (20, "second"), (30, "third")])
@@ -127,7 +125,7 @@ class InstagramBomberTests(unittest.TestCase):
                 "proxyMode": PROXY_MODE_ON_ERROR,
             }
         )
-        app = InstagramBomber(client=client, config=config)
+        app = InstagramService(client=client, config=config)
 
         with redirect_stdout(StringIO()):
             count = app._send("hello", [(10, "first")])
