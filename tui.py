@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
+from instagrapi.exceptions import TwoFactorRequired
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -232,7 +233,13 @@ class LoginScreen(BomberScreen):
             self.service.login_credentials(
                 username,
                 password,
-                self.report_from_thread,
+                status=self.report_from_thread,
+            )
+        except TwoFactorRequired:
+            self.app.call_from_thread(
+                self.verification_required,
+                username,
+                password,
             )
         except Exception as error:
             self.app.call_from_thread(self.login_failed, error_message(error))
@@ -244,9 +251,19 @@ class LoginScreen(BomberScreen):
         try:
             if not account_file:
                 raise ValueError("an account list path is required")
-            self.service.login_account_file(
-                Path(account_file),
-                self.report_from_thread,
+            username, password = self.service.credentials_from_account_file(
+                Path(account_file)
+            )
+            self.service.login_credentials(
+                username,
+                password,
+                status=self.report_from_thread,
+            )
+        except TwoFactorRequired:
+            self.app.call_from_thread(
+                self.verification_required,
+                username,
+                password,
             )
         except Exception as error:
             self.app.call_from_thread(self.login_failed, error_message(error))
@@ -261,6 +278,122 @@ class LoginScreen(BomberScreen):
         self.query_one("#login-username", Input).focus()
 
     def login_succeeded(self) -> None:
+        self.query_one("#login-password", Input).value = ""
+        self.bomber_app.authenticated = True
+        self.bomber_app.show_destination(self.destination)
+
+    def verification_required(self, username: str, password: str) -> None:
+        self.query_one("#login-password", Input).value = ""
+        self.busy = False
+        self.app.switch_screen(
+            VerificationScreen(self.destination, username, password)
+        )
+
+
+class VerificationScreen(BomberScreen):
+    def __init__(self, destination: str, username: str, password: str) -> None:
+        super().__init__()
+        self.destination = destination
+        self.username = username
+        self.password = password
+
+    def compose(self) -> ComposeResult:
+        yield self.header("Two-factor verification")
+        with Vertical(id="screen-body"):
+            yield Static("Verification required", classes="screen-title")
+            yield Static(
+                f"Instagram requested a verification code for @{self.username}.",
+                classes="muted",
+            )
+            yield LoadingIndicator(id="verification-loading")
+            yield Static(
+                "Enter the code from your authenticator, SMS, or Instagram prompt.",
+                id="verification-status",
+            )
+        with Vertical(id="prompt-panel", classes="verification-panel"):
+            yield Input(
+                placeholder="Verification code",
+                id="verification-code",
+            )
+            with Horizontal(classes="button-row"):
+                yield Button("Verify", id="verification-submit", variant="primary")
+                yield Button("Back", id="back")
+            yield Static(
+                "Enter  Verify    Esc  Back",
+                classes="prompt-help",
+            )
+
+    def on_mount(self) -> None:
+        self.query_one("#verification-loading", LoadingIndicator).display = False
+        self.query_one("#verification-code", Input).focus()
+
+    def action_go_back(self) -> None:
+        if not self.busy:
+            self.password = ""
+            self.app.switch_screen(LoginScreen(self.destination))
+
+    @on(Button.Pressed, "#back")
+    def back(self) -> None:
+        self.action_go_back()
+
+    @on(Button.Pressed, "#verification-submit")
+    @on(Input.Submitted, "#verification-code")
+    def submit(self) -> None:
+        code = self.query_one("#verification-code", Input).value.strip()
+        if not code:
+            self.finish_verification("A verification code is required", error=True)
+            return
+
+        self.set_busy(True, "Verifying code…")
+        self.verify_code(code)
+
+    def set_busy(self, busy: bool, message: str) -> None:
+        self.busy = busy
+        self.query_one("#verification-status", Static).update(message)
+        self.query_one("#verification-loading", LoadingIndicator).display = busy
+        for widget in self.query("#prompt-panel Input, #prompt-panel Button"):
+            widget.disabled = busy
+
+    @work(thread=True, exclusive=True, group="verification")
+    def verify_code(self, code: str) -> None:
+        try:
+            self.service.login_credentials(
+                self.username,
+                self.password,
+                verification_code=code,
+                status=self.report_from_thread,
+            )
+        except TwoFactorRequired as error:
+            self.app.call_from_thread(
+                self.finish_verification,
+                error_message(error),
+                True,
+            )
+        except Exception as error:
+            self.app.call_from_thread(
+                self.finish_verification,
+                error_message(error),
+                True,
+            )
+        else:
+            self.app.call_from_thread(self.verification_succeeded)
+
+    def write_activity(self, message: str) -> None:
+        self.query_one("#verification-status", Static).update(message)
+
+    def finish_verification(self, message: str, error: bool) -> None:
+        self.set_busy(False, message)
+        style = "red" if error else "green"
+        self.query_one("#verification-status", Static).update(
+            f"[{style}]{message}[/{style}]"
+        )
+        code = self.query_one("#verification-code", Input)
+        code.value = ""
+        code.focus()
+
+    def verification_succeeded(self) -> None:
+        self.password = ""
+        self.query_one("#verification-code", Input).value = ""
         self.bomber_app.authenticated = True
         self.bomber_app.show_destination(self.destination)
 

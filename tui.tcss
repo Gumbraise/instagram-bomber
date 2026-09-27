@@ -92,6 +92,10 @@ Screen {
     height: 17;
 }
 
+.verification-panel {
+    height: 9;
+}
+
 .grab-panel,
 .proxy-panel {
     height: 12;
@@ -158,11 +162,13 @@ RichLog {
 }
 
 #login-loading,
+#verification-loading,
 #update-loading {
     height: 3;
 }
 
 #login-status,
+#verification-status,
 #update-status,
 #proxy-summary,
 #boot-status {

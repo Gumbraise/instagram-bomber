@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, TypeVar
 
 from instagrapi import Client
-from instagrapi.exceptions import ClientError
+from instagrapi.exceptions import ClientError, TwoFactorRequired
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -134,6 +134,7 @@ class InstagramService:
         self,
         username: str,
         password: str,
+        verification_code: str = "",
         status: StatusCallback | None = None,
     ) -> None:
         if not username or not password:
@@ -141,7 +142,11 @@ class InstagramService:
 
         self._report(status, f"Connecting as {username}…")
         self._instagram_call(
-            lambda: self.client.login(username, password),
+            lambda: self.client.login(
+                username,
+                password,
+                verification_code=verification_code,
+            ),
             status,
         )
         self.config.update("sessionId", self.client.sessionid)
@@ -152,6 +157,11 @@ class InstagramService:
         path: Path,
         status: StatusCallback | None = None,
     ) -> None:
+        username, password = self.credentials_from_account_file(path)
+        self.login_credentials(username, password, status=status)
+
+    @staticmethod
+    def credentials_from_account_file(path: Path) -> tuple[str, str]:
         accounts = [
             line
             for line in path.expanduser().read_text(encoding="utf-8").splitlines()
@@ -165,8 +175,7 @@ class InstagramService:
         username = username.strip()
         if not username or not password:
             raise ValueError("the selected account is invalid")
-
-        self.login_credentials(username, password, status)
+        return username, password
 
     def send_to_username(
         self,
@@ -332,6 +341,8 @@ class InstagramService:
         for attempt in range(attempts):
             try:
                 return operation()
+            except TwoFactorRequired:
+                raise
             except ClientError:
                 is_last_attempt = attempt == attempts - 1
                 if is_last_attempt or not self.proxy_pool.rotate(self.client):
