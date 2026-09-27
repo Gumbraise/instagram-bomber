@@ -67,8 +67,16 @@ of the screen.
 - Press `Escape` to return to the main menu.
 - Press `Ctrl+C` to close the application and restore the terminal.
 
-The login prompt accepts either one account entered interactively or a text
-file containing accounts. Each account must be on its own line:
+## Login methods
+
+Before contacting Instagram, the login screen asks which method to use:
+
+- `Username and password` opens the masked password form. A saved session can
+  also be resumed explicitly from this screen;
+- `Account list (.txt)` asks for the file path first. No saved session or
+  account is connected before that path is submitted.
+
+Each account in the text file must be on its own line:
 
 ```text
 username:password
