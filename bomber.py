@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from getpass import getpass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable, TypeVar
 
 from instagrapi import Client
 from instagrapi.exceptions import ClientError, UserNotFound
@@ -15,6 +15,10 @@ from instagrapi.exceptions import ClientError, UserNotFound
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
+PROXY_MODE_PER_RECIPIENT = "per_recipient"
+PROXY_MODE_ON_ERROR = "on_error"
+PROXY_MODES = {PROXY_MODE_PER_RECIPIENT, PROXY_MODE_ON_ERROR}
+ReturnType = TypeVar("ReturnType")
 
 HEADER = r"""
 ██╗ ██████╗       ██████╗  ██████╗ ███╗   ███╗██████╗ ███████╗██████╗
@@ -30,7 +34,8 @@ MAIN_MENU = """
  1 | Instagram Bomber
  2 | Get User List
  3 | Update
- 4 | Exit
+ 4 | Configure Proxies
+ 5 | Exit
 """
 
 GRAB_MENU = """
@@ -51,17 +56,66 @@ class ConfigStore:
         data.setdefault("version", "2.0")
         data.setdefault("sessionId", "")
         data.setdefault("userList", [])
+        data.setdefault("proxies", [])
+        data.setdefault("proxyMode", PROXY_MODE_ON_ERROR)
         return data
 
     def update(self, key: str, value: Any) -> None:
+        self.update_many({key: value})
+
+    def update_many(self, values: dict[str, Any]) -> None:
         data = self.load()
-        data[key] = value
+        data.update(values)
 
         temporary_path = self.path.with_suffix(".tmp")
         with temporary_path.open("w", encoding="utf-8") as config_file:
             json.dump(data, config_file, indent=4)
             config_file.write("\n")
         temporary_path.replace(self.path)
+
+
+@dataclass
+class ProxyPool:
+    proxies: list[str]
+    mode: str = PROXY_MODE_ON_ERROR
+    index: int = 0
+
+    @classmethod
+    def from_config(cls, config: dict[str, Any]) -> ProxyPool:
+        configured_proxies = config.get("proxies", [])
+        proxies = (
+            [str(proxy).strip() for proxy in configured_proxies if str(proxy).strip()]
+            if isinstance(configured_proxies, list)
+            else []
+        )
+        mode = str(config.get("proxyMode", PROXY_MODE_ON_ERROR))
+        if mode not in PROXY_MODES:
+            mode = PROXY_MODE_ON_ERROR
+        return cls(proxies=proxies, mode=mode)
+
+    @property
+    def current(self) -> str | None:
+        if not self.proxies:
+            return None
+        return self.proxies[self.index]
+
+    def apply(self, client: Client) -> bool:
+        proxy = self.current
+        if not proxy:
+            return False
+        client.set_proxy(proxy)
+        return True
+
+    def rotate(self, client: Client) -> bool:
+        if len(self.proxies) < 2:
+            return False
+        self.index = (self.index + 1) % len(self.proxies)
+        self.apply(client)
+        return True
+
+    def label(self) -> str:
+        proxy = self.current or "disabled"
+        return proxy.rsplit("@", maxsplit=1)[-1]
 
 
 class InstagramBomber:
@@ -72,6 +126,8 @@ class InstagramBomber:
     ) -> None:
         self.client = client or Client()
         self.config = config or ConfigStore()
+        self.proxy_pool = ProxyPool.from_config(self.config.load())
+        self.proxy_pool.apply(self.client)
 
     def clear(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")
@@ -79,6 +135,9 @@ class InstagramBomber:
         print(HEADER.format(version=version))
 
     def login(self) -> None:
+        if self.proxy_pool.current:
+            print(f"Proxy | Using {self.proxy_pool.label()}")
+
         has_account_list = input(
             "Login | Do you have an account list? (y/N): "
         ).strip().lower()
@@ -90,7 +149,9 @@ class InstagramBomber:
         session_id = str(self.config.load()["sessionId"])
         if session_id:
             try:
-                self.client.login_by_sessionid(session_id)
+                self._instagram_call(
+                    lambda: self.client.login_by_sessionid(session_id)
+                )
                 print("Login | Logged in by sessionId")
                 return
             except ClientError as error:
@@ -104,7 +165,7 @@ class InstagramBomber:
             password = getpass("Login | Password: ")
 
             try:
-                self.client.login(username, password)
+                self._instagram_call(lambda: self.client.login(username, password))
             except ClientError as error:
                 print(f"Login | Failed: {error}")
                 continue
@@ -129,7 +190,7 @@ class InstagramBomber:
                 if not username or not password:
                     raise ValueError("empty username or password")
                 print(f"Login | Username found: {username}")
-                self.client.login(username, password)
+                self._instagram_call(lambda: self.client.login(username, password))
                 return
             except (OSError, ValueError, IndexError, ClientError) as error:
                 print(f"Login | Could not use account list: {error}")
@@ -168,7 +229,10 @@ class InstagramBomber:
         while True:
             username = input(prompt).strip()
             try:
-                user_id = int(self.client.user_info_by_username(username).pk)
+                user = self._instagram_call(
+                    lambda: self.client.user_info_by_username(username)
+                )
+                user_id = int(user.pk)
                 return username, user_id
             except UserNotFound:
                 print("User | Username not found")
@@ -178,7 +242,12 @@ class InstagramBomber:
     def _send(self, message: str, recipients: Iterable[tuple[int, str]]) -> int:
         sent = 0
         for sent, (user_id, label) in enumerate(recipients, start=1):
-            self.client.direct_send(message, user_ids=[user_id])
+            if sent > 1 and self.proxy_pool.mode == PROXY_MODE_PER_RECIPIENT:
+                if self.proxy_pool.rotate(self.client):
+                    print(f"Proxy | Switched to {self.proxy_pool.label()}")
+            self._instagram_call(
+                lambda: self.client.direct_send(message, user_ids=[user_id])
+            )
             print(f"({sent}) {self.client.username} > {label}: {message}")
         return sent
 
@@ -195,10 +264,14 @@ class InstagramBomber:
             username, user_id = self._prompt_for_user("| Grabbed username: ")
             try:
                 if choice == 1:
-                    users = self.client.user_followers(user_id)
+                    users = self._instagram_call(
+                        lambda: self.client.user_followers(user_id)
+                    )
                     relation = "followers"
                 else:
-                    users = self.client.user_following(user_id)
+                    users = self._instagram_call(
+                        lambda: self.client.user_following(user_id)
+                    )
                     relation = "following"
             except ClientError as error:
                 print(f"Grab | Failed: {error}")
@@ -209,6 +282,76 @@ class InstagramBomber:
             print(f"Grab | Saved {len(user_ids)} {relation} of {username}")
             input("Continue...")
             self.clear()
+
+    def configure_proxies(self) -> None:
+        print(
+            "Proxy | Enter one proxy or the path to a text file. "
+            "Leave empty to disable proxies."
+        )
+        source = input("| Proxy or list path: ").strip()
+
+        if not source:
+            self.proxy_pool = ProxyPool([])
+            self.client.set_proxy(None)
+            self.config.update_many(
+                {"proxies": [], "proxyMode": PROXY_MODE_ON_ERROR}
+            )
+            print("Proxy | Disabled")
+            return
+
+        source_path = Path(source).expanduser()
+        try:
+            if source_path.is_file():
+                candidates = source_path.read_text(encoding="utf-8").splitlines()
+            else:
+                candidates = [source]
+        except OSError as error:
+            print(f"Proxy | Could not read list: {error}")
+            return
+
+        proxies = list(
+            dict.fromkeys(proxy.strip() for proxy in candidates if proxy.strip())
+        )
+        if not proxies:
+            print("Proxy | No proxy found")
+            return
+
+        print(" 1 | Rotate for every recipient")
+        print(" 2 | Rotate after an Instagram error")
+        choice = self._prompt_for_choice("| ", {1, 2})
+        mode = (
+            PROXY_MODE_PER_RECIPIENT if choice == 1 else PROXY_MODE_ON_ERROR
+        )
+
+        self.proxy_pool = ProxyPool(proxies=proxies, mode=mode)
+        self.proxy_pool.apply(self.client)
+        self.config.update_many({"proxies": proxies, "proxyMode": mode})
+        print(
+            f"Proxy | Loaded {len(proxies)} proxy(s); "
+            f"using {self.proxy_pool.label()}"
+        )
+
+    def _instagram_call(
+        self,
+        operation: Callable[[], ReturnType],
+    ) -> ReturnType:
+        attempts = (
+            len(self.proxy_pool.proxies)
+            if self.proxy_pool.mode == PROXY_MODE_ON_ERROR
+            else 1
+        )
+        attempts = max(attempts, 1)
+
+        for attempt in range(attempts):
+            try:
+                return operation()
+            except ClientError:
+                is_last_attempt = attempt == attempts - 1
+                if is_last_attempt or not self.proxy_pool.rotate(self.client):
+                    raise
+                print(f"Proxy | Error received, switched to {self.proxy_pool.label()}")
+
+        raise RuntimeError("Instagram operation ended without a result")
 
     def update_repository(self) -> None:
         result = subprocess.run(
@@ -222,7 +365,7 @@ class InstagramBomber:
     def run(self) -> None:
         while True:
             print(MAIN_MENU)
-            choice = self._prompt_for_choice("| ", {1, 2, 3, 4})
+            choice = self._prompt_for_choice("| ", {1, 2, 3, 4, 5})
 
             if choice == 1:
                 self.bomber()
@@ -230,6 +373,8 @@ class InstagramBomber:
                 self.grab_users()
             elif choice == 3:
                 self.update_repository()
+            elif choice == 4:
+                self.configure_proxies()
             else:
                 return
 
