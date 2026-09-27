@@ -37,7 +37,7 @@ On Linux or macOS:
 source .venv/bin/activate
 ```
 
-Install the dependency:
+Install the dependencies:
 
 ```console
 python -m pip install -r requirements.txt
@@ -51,8 +51,21 @@ Run the application from the repository root:
 python bomber.py
 ```
 
-The application runs `git pull` at startup, then displays its menu. Press
-`Ctrl+C` at any time to stop it.
+The application opens in a full-screen terminal interface and runs `git pull`
+on its startup screen.
+
+## Terminal navigation
+
+Each view replaces the previous one, so completed actions do not accumulate in
+the terminal history. Input fields and their actions stay docked at the bottom
+of the screen.
+
+- Use the arrow keys and `Enter` to navigate menus.
+- Click menu entries, fields, radio buttons, checkboxes, and buttons with the
+  mouse.
+- Use `Tab` to move between form controls.
+- Press `Escape` to return to the main menu.
+- Press `Ctrl+C` to close the application and restore the terminal.
 
 The login prompt accepts either one account entered interactively or a text
 file containing accounts. Each account must be on its own line:
@@ -85,8 +98,8 @@ The application offers two rotation modes:
 - `Rotate after an Instagram error` retries a failed login, lookup, collection,
   or message operation with the next configured proxy.
 
-The first configured proxy is always applied before login. Enter an empty value
-in the proxy configuration screen to disable proxies. Proxy passwords are
+The first configured proxy is always applied before login. Select `Disable` in
+the proxy configuration screen to stop using proxies. Proxy passwords are
 hidden in terminal messages, but the complete proxy addresses are stored in
 `config.json`.
 
@@ -108,7 +121,9 @@ file private and clear `sessionId` before sharing it.
 
 ## Tests
 
-The test suite does not connect to Instagram:
+The test suite does not connect to Instagram. It also runs the terminal UI in
+headless mode to exercise keyboard navigation, mouse clicks, screen replacement,
+compact-terminal layout, and password masking:
 
 ```console
 python -m unittest discover -s tests -v
