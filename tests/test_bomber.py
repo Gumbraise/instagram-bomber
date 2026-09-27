@@ -3,7 +3,7 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from instagrapi.exceptions import ClientError
+from instagrapi.exceptions import ClientError, TwoFactorRequired
 
 from bomber import (
     PROXY_MODE_ON_ERROR,
@@ -21,6 +21,7 @@ class FakeClient:
         self.sent: list[tuple[str, list[int]]] = []
         self.sessions: list[str] = []
         self.proxies: list[str | None] = []
+        self.logins: list[tuple[str, str, str]] = []
         self.send_failures = 0
 
     def direct_send(self, message: str, user_ids: list[int]) -> None:
@@ -32,6 +33,14 @@ class FakeClient:
     def login_by_sessionid(self, session_id: str) -> None:
         self.sessions.append(session_id)
 
+    def login(
+        self,
+        username: str,
+        password: str,
+        verification_code: str = "",
+    ) -> None:
+        self.logins.append((username, password, verification_code))
+
     def set_proxy(self, proxy: str | None) -> None:
         self.proxies.append(proxy)
 
@@ -42,6 +51,12 @@ class FakeConfig:
 
     def load(self) -> dict[str, object]:
         return self.data
+
+    def update(self, key: str, value: object) -> None:
+        self.data[key] = value
+
+    def update_many(self, values: dict[str, object]) -> None:
+        self.data.update(values)
 
 
 class ConfigStoreTests(unittest.TestCase):
@@ -141,6 +156,41 @@ class InstagramBomberTests(unittest.TestCase):
         pool = ProxyPool(["http://username:password@proxy.example:8080"])
 
         self.assertEqual(pool.label(), "proxy.example:8080")
+
+    def test_passes_verification_code_to_instagram(self) -> None:
+        client = FakeClient()
+        config = FakeConfig({})
+        service = InstagramService(client=client, config=config)
+
+        service.login_credentials(
+            "username",
+            "password",
+            verification_code="123456",
+        )
+
+        self.assertEqual(
+            client.logins,
+            [("username", "password", "123456")],
+        )
+        self.assertEqual(config.data["sessionId"], "new-session")
+
+    def test_does_not_rotate_proxy_for_two_factor_prompt(self) -> None:
+        client = FakeClient()
+        config = FakeConfig(
+            {
+                "proxies": ["http://proxy-one:8000", "http://proxy-two:8000"],
+                "proxyMode": PROXY_MODE_ON_ERROR,
+            }
+        )
+        service = InstagramService(client=client, config=config)
+
+        def require_verification() -> None:
+            raise TwoFactorRequired("verification required")
+
+        with self.assertRaises(TwoFactorRequired):
+            service._instagram_call(require_verification)
+
+        self.assertEqual(client.proxies, ["http://proxy-one:8000"])
 
 
 if __name__ == "__main__":

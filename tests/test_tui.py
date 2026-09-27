@@ -1,5 +1,6 @@
 import unittest
 
+from instagrapi.exceptions import TwoFactorRequired
 from textual.containers import Vertical
 from textual.widgets import Input, OptionList
 
@@ -10,6 +11,7 @@ from tui import (
     MainMenuScreen,
     ProxyScreen,
     SendScreen,
+    VerificationScreen,
 )
 
 
@@ -27,6 +29,24 @@ class FakeService:
     username = "not connected"
     has_saved_session = False
     proxy_pool = FakeProxyPool()
+
+
+class TwoFactorService(FakeService):
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    def login_credentials(
+        self,
+        username: str,
+        password: str,
+        verification_code: str = "",
+        status=None,
+    ) -> None:
+        self.calls.append((username, password, verification_code))
+        if verification_code != "123456":
+            raise TwoFactorRequired("verification required")
+        if status is not None:
+            status("Verification accepted")
 
 
 class BomberAppTests(unittest.IsolatedAsyncioTestCase):
@@ -73,6 +93,43 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
             body = app.screen.query_one("#screen-body", Vertical)
             prompt = app.screen.query_one("#prompt-panel", Vertical)
             self.assertGreaterEqual(prompt.region.y, body.region.bottom)
+
+    async def test_two_factor_prompt_retries_login_with_code(self) -> None:
+        service = TwoFactorService()
+        app = BomberApp(service=service, auto_update=False)
+
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            menu = app.screen.query_one("#main-menu", OptionList)
+            menu.highlighted = 0
+            await pilot.press("enter")
+
+            login = app.screen
+            self.assertIsInstance(login, LoginScreen)
+            login.query_one("#login-username", Input).value = "username"
+            login.query_one("#login-password", Input).value = "password"
+            await pilot.click("#login-submit")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+
+            verification = app.screen
+            self.assertIsInstance(verification, VerificationScreen)
+            self.assertEqual(len(app.screen_stack), 2)
+            verification.query_one("#verification-code", Input).value = "123456"
+            await pilot.click("#verification-submit")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+
+            self.assertIsInstance(app.screen, SendScreen)
+            self.assertTrue(app.authenticated)
+            self.assertEqual(
+                service.calls,
+                [
+                    ("username", "password", ""),
+                    ("username", "password", "123456"),
+                ],
+            )
+            self.assertEqual(verification.password, "")
 
 
 if __name__ == "__main__":
