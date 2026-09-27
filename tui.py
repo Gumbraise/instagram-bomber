@@ -28,6 +28,7 @@ from bomber import (
     PROXY_MODE_PER_RECIPIENT,
     InstagramService,
 )
+from telemetry import SentryReporter
 
 
 def error_message(error: Exception) -> str:
@@ -100,6 +101,44 @@ class BootScreen(BomberScreen):
         self.bomber_app.show_main()
 
 
+class ConsentScreen(BomberScreen):
+    BINDINGS: list[Binding] = []
+
+    def compose(self) -> ComposeResult:
+        yield self.header("Privacy choice")
+        with Vertical(id="consent-body"):
+            yield Static("Help improve IG Bomber", classes="screen-title")
+            yield Static(
+                "Allow filtered error reports to be sent to Sentry?\n\n"
+                "Reports contain the app version, Python and operating-system "
+                "details, exception types, and stack traces. Passwords, session "
+                "IDs, verification codes, proxy credentials, message content, "
+                "local variables, and absolute paths are removed before sending.\n\n"
+                "Sentry's US endpoint receives the connection IP address.\n\n"
+                "You can change this choice later from Error reporting.",
+                id="consent-description",
+            )
+        with Vertical(id="prompt-panel", classes="consent-panel"):
+            with Horizontal(classes="button-row"):
+                yield Button("Allow", id="consent-allow", variant="primary")
+                yield Button("Decline", id="consent-decline")
+            yield Static(
+                "Tab  Choose    Enter  Confirm    Ctrl+C  Quit",
+                classes="prompt-help",
+            )
+
+    def on_mount(self) -> None:
+        self.query_one("#consent-allow", Button).focus()
+
+    @on(Button.Pressed, "#consent-allow")
+    def allow(self) -> None:
+        self.bomber_app.finish_initial_consent(True)
+
+    @on(Button.Pressed, "#consent-decline")
+    def decline(self) -> None:
+        self.bomber_app.finish_initial_consent(False)
+
+
 class MainMenuScreen(BomberScreen):
     def compose(self) -> ComposeResult:
         yield self.header("Command center")
@@ -111,11 +150,12 @@ class MainMenuScreen(BomberScreen):
                 classes="muted",
             )
             yield OptionList(
-                Option("Send messages\n", id="send"),
-                Option("Collect users\n", id="grab"),
-                Option("Configure proxies\n", id="proxy"),
-                Option("Update repository\n", id="update"),
-                Option("Exit\n", id="exit"),
+                Option("Send messages", id="send"),
+                Option("Collect users", id="grab"),
+                Option("Configure proxies", id="proxy"),
+                Option("Update repository", id="update"),
+                Option("Error reporting", id="telemetry"),
+                Option("Exit", id="exit"),
                 id="main-menu",
             )
         yield Static(
@@ -137,6 +177,8 @@ class MainMenuScreen(BomberScreen):
             self.app.switch_screen(ProxyScreen())
         elif destination == "update":
             self.app.switch_screen(UpdateScreen())
+        elif destination == "telemetry":
+            self.app.switch_screen(PrivacyScreen())
         elif destination == "exit":
             self.app.exit()
 
@@ -828,6 +870,55 @@ class UpdateScreen(BomberScreen):
         back.focus()
 
 
+class PrivacyScreen(BomberScreen):
+    def compose(self) -> ComposeResult:
+        yield self.header("Error reporting")
+        with Vertical(id="consent-body"):
+            yield Static("Sentry error reporting", classes="screen-title")
+            yield Static(
+                "Filtered crash diagnostics help identify application errors. "
+                "Sensitive account and message data is removed before sending.",
+                id="privacy-description",
+            )
+            yield Static(id="privacy-status")
+        with Vertical(id="prompt-panel", classes="consent-panel"):
+            with Horizontal(classes="button-row"):
+                yield Button("Allow", id="privacy-allow", variant="primary")
+                yield Button("Decline", id="privacy-decline")
+                yield Button("Back", id="back")
+            yield Static(
+                "Tab  Choose    Enter  Apply    Esc  Back",
+                classes="prompt-help",
+            )
+
+    def on_mount(self) -> None:
+        self.refresh_status()
+        self.query_one("#privacy-allow", Button).focus()
+
+    def refresh_status(self, message: str = "") -> None:
+        enabled = self.service.analytics_consent is True
+        state = "enabled" if enabled else "disabled"
+        color = "green" if enabled else "yellow"
+        text = f"Error reporting is [{color}]{state}[/{color}]"
+        if message:
+            text = f"{text}\n\n{message}"
+        self.query_one("#privacy-status", Static).update(text)
+
+    @on(Button.Pressed, "#privacy-allow")
+    def allow(self) -> None:
+        self.bomber_app.set_analytics_consent(True)
+        self.refresh_status("[green]Preference saved[/green]")
+
+    @on(Button.Pressed, "#privacy-decline")
+    def decline(self) -> None:
+        self.bomber_app.set_analytics_consent(False)
+        self.refresh_status("[green]Preference saved[/green]")
+
+    @on(Button.Pressed, "#back")
+    def back(self) -> None:
+        self.action_go_back()
+
+
 class BomberApp(App[None]):
     CSS_PATH = "tui.tcss"
     ENABLE_COMMAND_PALETTE = False
@@ -836,20 +927,44 @@ class BomberApp(App[None]):
     def __init__(
         self,
         service: InstagramService | None = None,
+        reporter: SentryReporter | None = None,
         *,
         auto_update: bool = True,
     ) -> None:
         super().__init__()
         self.service = service if service is not None else InstagramService()
+        self.reporter = reporter if reporter is not None else SentryReporter()
         self.auto_update = auto_update
         self.authenticated = False
         self.startup_message = "Ready"
 
     def on_mount(self) -> None:
+        consent = self.service.analytics_consent
+        if consent is None:
+            self.push_screen(ConsentScreen())
+            return
+        self.apply_analytics_consent(consent)
+        self.start_application()
+
+    def start_application(self) -> None:
         if self.auto_update:
             self.push_screen(BootScreen())
         else:
             self.push_screen(MainMenuScreen())
+
+    def apply_analytics_consent(self, consent: bool) -> None:
+        if consent:
+            self.reporter.enable(f"instagram-bomber@{self.service.version}")
+        else:
+            self.reporter.disable()
+
+    def set_analytics_consent(self, consent: bool) -> None:
+        self.service.set_analytics_consent(consent)
+        self.apply_analytics_consent(consent)
+
+    def finish_initial_consent(self, consent: bool) -> None:
+        self.set_analytics_consent(consent)
+        self.switch_screen(BootScreen() if self.auto_update else MainMenuScreen())
 
     def show_main(self) -> None:
         self.switch_screen(MainMenuScreen())

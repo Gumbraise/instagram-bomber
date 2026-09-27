@@ -20,7 +20,8 @@ Screen {
 }
 
 #menu-body,
-#boot-body {
+#boot-body,
+#consent-body {
     height: 1fr;
     align: center middle;
     padding: 1 4;
@@ -43,7 +44,7 @@ Screen {
 
 #main-menu {
     width: 64;
-    height: 12;
+    height: 8;
     margin-top: 1;
     padding: 0;
     border: round #344253;
@@ -105,6 +106,10 @@ Screen {
 
 .account-panel {
     height: 9;
+}
+
+.consent-panel {
+    height: 6;
 }
 
 .send-panel {
@@ -201,4 +206,18 @@ RichLog {
 
 #boot-body Button {
     margin-top: 1;
+}
+
+#consent-description,
+#privacy-description {
+    width: 72;
+    height: auto;
+    color: #aab5c1;
+}
+
+#privacy-status {
+    width: 72;
+    height: auto;
+    margin-top: 2;
+    content-align: center middle;
 }

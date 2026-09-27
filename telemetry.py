@@ -103,6 +103,8 @@ class SentryReporter:
         self.active = True
 
     def disable(self) -> None:
+        if not self.active:
+            return
         client = self.sdk.get_client()
         for getter_name in (
             "get_global_scope",
