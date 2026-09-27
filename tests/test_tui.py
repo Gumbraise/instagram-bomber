@@ -115,6 +115,16 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
             verification = app.screen
             self.assertIsInstance(verification, VerificationScreen)
             self.assertEqual(len(app.screen_stack), 2)
+            verification.query_one("#verification-code", Input).value = "000000"
+            await pilot.click("#verification-submit")
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+
+            self.assertIs(app.screen, verification)
+            self.assertEqual(
+                verification.query_one("#verification-code", Input).value,
+                "",
+            )
             verification.query_one("#verification-code", Input).value = "123456"
             await pilot.click("#verification-submit")
             await app.workers.wait_for_complete()
@@ -126,6 +136,7 @@ class BomberAppTests(unittest.IsolatedAsyncioTestCase):
                 service.calls,
                 [
                     ("username", "password", ""),
+                    ("username", "password", "000000"),
                     ("username", "password", "123456"),
                 ],
             )
