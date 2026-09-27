@@ -4,8 +4,8 @@ from instagrapi.exceptions import TwoFactorRequired
 from textual.containers import Vertical
 from textual.widgets import Input, OptionList
 
-from bomber import PROXY_MODE_ON_ERROR
-from tui import (
+from instagram_bomber import PROXY_MODE_ON_ERROR
+from instagram_bomber.tui import (
     AccountListLoginScreen,
     BomberApp,
     ConsentScreen,

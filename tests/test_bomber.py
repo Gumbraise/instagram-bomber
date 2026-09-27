@@ -5,7 +5,7 @@ from io import StringIO
 from pathlib import Path
 from instagrapi.exceptions import ClientError, TwoFactorRequired
 
-from bomber import (
+from instagram_bomber import (
     PROXY_MODE_ON_ERROR,
     PROXY_MODE_PER_RECIPIENT,
     ConfigStore,

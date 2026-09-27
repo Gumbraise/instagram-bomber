@@ -1,6 +1,6 @@
 import unittest
 
-from telemetry import FILTERED, SentryReporter, scrub_event
+from instagram_bomber.telemetry import FILTERED, SentryReporter, scrub_event
 
 
 class FakeClient:
