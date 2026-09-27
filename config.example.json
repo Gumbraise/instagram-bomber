@@ -1,5 +1,6 @@
 {
     "version": "2.1",
+    "analyticsConsent": null,
     "sessionId": "",
     "userList": [],
     "proxies": [],

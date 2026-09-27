@@ -18,6 +18,7 @@ PROXY_MODE_ON_ERROR = "on_error"
 PROXY_MODES = {PROXY_MODE_PER_RECIPIENT, PROXY_MODE_ON_ERROR}
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": "2.1",
+    "analyticsConsent": None,
     "sessionId": "",
     "userList": [],
     "proxies": [],
@@ -134,6 +135,14 @@ class InstagramService:
     @property
     def has_saved_session(self) -> bool:
         return bool(self.config.load()["sessionId"])
+
+    @property
+    def analytics_consent(self) -> bool | None:
+        consent = self.config.load()["analyticsConsent"]
+        return consent if isinstance(consent, bool) else None
+
+    def set_analytics_consent(self, consent: bool) -> None:
+        self.config.update("analyticsConsent", consent)
 
     def login_saved_session(self, status: StatusCallback | None = None) -> bool:
         session_id = str(self.config.load()["sessionId"])
