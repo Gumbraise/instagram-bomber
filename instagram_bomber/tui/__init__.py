@@ -1,18 +1,13 @@
-from instagram_bomber.tui import (
+from .actions import GrabScreen, SendScreen
+from .app import BomberApp
+from .auth import (
     AccountListLoginScreen,
-    BomberApp,
-    BootScreen,
-    ConsentScreen,
     CredentialsLoginScreen,
-    GrabScreen,
     LoginScreen,
-    MainMenuScreen,
-    PrivacyScreen,
-    ProxyScreen,
-    SendScreen,
-    UpdateScreen,
     VerificationScreen,
 )
+from .settings import PrivacyScreen, ProxyScreen, UpdateScreen
+from .startup import BootScreen, ConsentScreen, MainMenuScreen
 
 __all__ = [
     "AccountListLoginScreen",
@@ -29,7 +24,3 @@ __all__ = [
     "UpdateScreen",
     "VerificationScreen",
 ]
-
-
-if __name__ == "__main__":
-    BomberApp().run()

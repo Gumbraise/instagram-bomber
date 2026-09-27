@@ -6,6 +6,7 @@ from instagram_bomber import (
     InstagramService,
     ProxyPool,
 )
+from instagram_bomber.cli import main
 
 __all__ = [
     "ConfigStore",
@@ -16,14 +17,5 @@ __all__ = [
     "ProxyPool",
     "main",
 ]
-
-
-def main() -> int:
-    from tui import BomberApp
-
-    BomberApp().run()
-    return 0
-
-
 if __name__ == "__main__":
     raise SystemExit(main())
