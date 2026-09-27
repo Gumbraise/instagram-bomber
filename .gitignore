@@ -108,3 +108,7 @@ venv.bak/
 
 # Test program
 test.py
+
+# Runtime credentials and sessions
+config.json
+config.tmp

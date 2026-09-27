@@ -60,6 +60,16 @@ class FakeConfig:
 
 
 class ConfigStoreTests(unittest.TestCase):
+    def test_creates_missing_runtime_config(self) -> None:
+        path = Path(__file__).with_name(".new-test-config.json")
+        self.addCleanup(path.unlink, missing_ok=True)
+
+        data = ConfigStore(path).load()
+
+        self.assertTrue(path.exists())
+        self.assertEqual(data["sessionId"], "")
+        self.assertEqual(data["proxies"], [])
+
     def test_loads_defaults_and_persists_updates(self) -> None:
         path = Path(__file__).with_name(".test-config.json")
         self.addCleanup(path.unlink, missing_ok=True)

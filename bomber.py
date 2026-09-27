@@ -16,6 +16,13 @@ CONFIG_PATH = BASE_DIR / "config.json"
 PROXY_MODE_PER_RECIPIENT = "per_recipient"
 PROXY_MODE_ON_ERROR = "on_error"
 PROXY_MODES = {PROXY_MODE_PER_RECIPIENT, PROXY_MODE_ON_ERROR}
+DEFAULT_CONFIG: dict[str, Any] = {
+    "version": "2.1",
+    "sessionId": "",
+    "userList": [],
+    "proxies": [],
+    "proxyMode": PROXY_MODE_ON_ERROR,
+}
 
 ReturnType = TypeVar("ReturnType")
 StatusCallback = Callable[[str], None]
@@ -26,14 +33,15 @@ class ConfigStore:
     path: Path = CONFIG_PATH
 
     def load(self) -> dict[str, Any]:
-        with self.path.open(encoding="utf-8") as config_file:
-            data = json.load(config_file)
+        if self.path.exists():
+            with self.path.open(encoding="utf-8") as config_file:
+                data = json.load(config_file)
+        else:
+            data = self._defaults()
+            self._write(data)
 
-        data.setdefault("version", "2.1")
-        data.setdefault("sessionId", "")
-        data.setdefault("userList", [])
-        data.setdefault("proxies", [])
-        data.setdefault("proxyMode", PROXY_MODE_ON_ERROR)
+        for key, value in self._defaults().items():
+            data.setdefault(key, value)
         return data
 
     def update(self, key: str, value: Any) -> None:
@@ -42,12 +50,22 @@ class ConfigStore:
     def update_many(self, values: dict[str, Any]) -> None:
         data = self.load()
         data.update(values)
+        self._write(data)
 
+    def _write(self, data: dict[str, Any]) -> None:
         temporary_path = self.path.with_suffix(".tmp")
         with temporary_path.open("w", encoding="utf-8") as config_file:
             json.dump(data, config_file, indent=4)
             config_file.write("\n")
         temporary_path.replace(self.path)
+
+    @staticmethod
+    def _defaults() -> dict[str, Any]:
+        return {
+            **DEFAULT_CONFIG,
+            "userList": [],
+            "proxies": [],
+        }
 
 
 @dataclass
