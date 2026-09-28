@@ -98,6 +98,10 @@ credentials; it is ignored by Git and must be kept private.
 
 Please report vulnerabilities according to [SECURITY.md](SECURITY.md).
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete release history.
+
 ## Contributing
 
 [![List of contributors](https://contrib.rocks/image?repo=Gumbraise/instagram-bomber)](https://github.com/Gumbraise/instagram-bomber/graphs/contributors)
