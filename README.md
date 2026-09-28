@@ -100,8 +100,10 @@ Please report vulnerabilities according to [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
-testing, and pull-request guidance, and follow the
+[![List of contributors](https://contrib.rocks/image?repo=Gumbraise/instagram-bomber)](https://github.com/Gumbraise/instagram-bomber/graphs/contributors)
+
+For local setup, tests, and pull-request expectations, see
+[CONTRIBUTING.md](CONTRIBUTING.md). Please also follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Donations
