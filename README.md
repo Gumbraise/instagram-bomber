@@ -111,8 +111,13 @@ For local setup, tests, and pull-request expectations, see
 If you would like to support this project, you can donate through:
 
 - PayPal: [paypal.me/Gumbraise](https://www.paypal.me/Gumbraise)
-- Bitcoin: `3ML4B58aw9CHTsjE5nPGzVhTLK8mBz8Vv4`
-- Ethereum: `0xf1fee16e2b91b462139434b9c5FE949856ccc6eb`
+- Bitcoin: `bc1qwurupha8n5m96x477l3j05nxgeqthp4y3ncagq`
+- Ethereum / Polygon / Chainlink / USDT / USDC:
+  `0xa46617B99Dc72E1138Bd4ccd8f60eA27fF2CfFe4`
+- Solana / USDT / USDC:
+  `GxBb3KJeBUqnftSNU2VBPTMM2vq6kcj5MPwCXbfy3B2P`
+- Litecoin: `ltc1qq4glktdz4z4xvzf4dz8p56cf45cgcfqdsxv7j4`
+- TRON: `TAUiCbBLftDRqurBzbbDxJ7Mov4Sn5Y6pj`
 
 ## License
 
