@@ -11,7 +11,7 @@ from .proxies import PROXY_MODE_ON_ERROR
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = PROJECT_ROOT / "config.json"
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "2.1",
+    "version": "3.0",
     "analyticsConsent": None,
     "sessionId": "",
     "userList": [],
@@ -34,6 +34,7 @@ class ConfigStore:
 
         for key, value in self._defaults().items():
             data.setdefault(key, value)
+        data["version"] = DEFAULT_CONFIG["version"]
         return data
 
     def update(self, key: str, value: Any) -> None:
