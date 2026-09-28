@@ -7,8 +7,8 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 
 
 SENTRY_DSN = (
-    "https://cb1bd726d88da2866102e97624e48ba0"
-    "@o476466.ingest.us.sentry.io/4512160235126784"
+    "https://2b7000ec7273a2f7932493f00500a5e4"
+    "@o476466.ingest.us.sentry.io/4512160433242112"
 )
 FILTERED = "[Filtered]"
 SENSITIVE_KEY_PARTS = (
